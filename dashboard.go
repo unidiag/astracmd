@@ -223,13 +223,13 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 	// ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝    ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝
 
 	showStreamDialog := func(editStream *AstraStream) {
+		activePane := rt.activePane
+
 		ui.ShowStreamDialog(
 			conn,
 			editStream,
 			rt.currentConfig.Streams,
 			func(saved AstraStream) {
-				activePane := rt.activePane
-
 				rt.versionView.SetText(fmt.Sprintf(
 					"[green]Stream saved: %s[-]",
 					tview.Escape(saved.DisplayName()),
@@ -238,6 +238,9 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 				loadAstraConfigAfter(func() {
 					rt.SetActivePane(activePane)
 				})
+			},
+			func() {
+				rt.SetActivePane(activePane)
 			},
 			func(err error) {
 				ui.ShowError(err.Error(), nil)
@@ -515,6 +518,12 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 			Label: "Restart",
 			Handle: func() {
 				confirmRestart()
+			},
+		},
+		4: {
+			Label: "Edit",
+			Handle: func() {
+				editSelectedDashboardItem()
 			},
 		},
 		5: {

@@ -133,23 +133,20 @@ func (ui *UI) ShowConnections() {
 			ui.ShowConnectionForm(nil)
 			return nil
 
+		case tcell.KeyF4:
+			row, _ := table.GetSelection()
+			if row >= 0 && row < len(ui.cfg.Connections) {
+				conn := ui.cfg.Connections[row]
+				ui.ShowConnectionForm(&conn)
+			}
+			return nil
+
 		case tcell.KeyF8, tcell.KeyDelete:
 			row, _ := table.GetSelection()
 			if row >= 0 && row < len(ui.cfg.Connections) {
 				ui.ConfirmDelete(ui.cfg.Connections[row])
 			}
 			return nil
-
-		case tcell.KeyRune:
-			switch event.Rune() {
-			case ' ':
-				row, _ := table.GetSelection()
-				if row >= 0 && row < len(ui.cfg.Connections) {
-					conn := ui.cfg.Connections[row]
-					ui.ShowConnectionForm(&conn)
-				}
-				return nil
-			}
 		}
 
 		return event
@@ -158,7 +155,7 @@ func (ui *UI) ShowConnections() {
 	help := tview.NewTextView()
 	help.SetDynamicColors(true)
 	help.SetTextAlign(tview.AlignCenter)
-	help.SetText("[gray]Enter / Left click — open · F7 — new · SPACE — edit · F8 — delete · ESC — quit[-]")
+	help.SetText("[gray]Enter / Left click — open · F4 — edit · F7 — new · F8 — delete · ESC — quit[-]")
 
 	body := tview.NewFlex()
 	body.SetDirection(tview.FlexRow)

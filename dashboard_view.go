@@ -27,17 +27,24 @@ func dashboardUpdateLogTitle(
 	dimmed bool,
 	debugLogEnabled bool,
 ) {
-	if dimmed {
-		logTable.SetTitle(" Log: Reloading... ")
+	if logTable == nil {
 		return
 	}
+
+	title := " Log "
 
 	if debugLogEnabled {
-		logTable.SetTitle(" Log: Debug ON ")
+		title = " Log [debug] "
+	}
+
+	logTable.SetTitle(title)
+
+	if dimmed {
+		logTable.SetTitleColor(tcell.ColorDarkGray)
 		return
 	}
 
-	logTable.SetTitle(" Log: Debug OFF ")
+	logTable.SetTitleColor(tcell.ColorWhite)
 }
 
 func dashboardUpdateBorders(
@@ -47,39 +54,28 @@ func dashboardUpdateBorders(
 	activePane int,
 	dimmed bool,
 ) {
-	activeColor := tcell.ColorYellow
-	inactiveColor := tcell.ColorDarkCyan
+	borderColor := tcell.ColorDarkCyan
+	titleColor := tcell.ColorWhite
 
 	if dimmed {
-		activeColor = tcell.ColorDarkGray
-		inactiveColor = tcell.ColorDarkGray
+		borderColor = tcell.ColorDarkGray
+		titleColor = tcell.ColorDarkGray
 	}
 
-	adaptersTable.SetBorderColor(inactiveColor)
-	streamsTable.SetBorderColor(inactiveColor)
-	logTable.SetBorderColor(inactiveColor)
+	adaptersTable.SetBorderColor(borderColor)
+	streamsTable.SetBorderColor(borderColor)
+	logTable.SetBorderColor(borderColor)
 
-	adaptersTable.SetTitleColor(tcell.ColorWhite)
-	streamsTable.SetTitleColor(tcell.ColorWhite)
-	logTable.SetTitleColor(tcell.ColorWhite)
-
-	if dimmed {
-		adaptersTable.SetTitleColor(tcell.ColorDarkGray)
-		streamsTable.SetTitleColor(tcell.ColorDarkGray)
-		logTable.SetTitleColor(tcell.ColorDarkGray)
-		return
-	}
-
-	switch activePane {
-	case dashboardPaneAdapters:
-		adaptersTable.SetBorderColor(activeColor)
-
-	case dashboardPaneStreams:
-		streamsTable.SetBorderColor(activeColor)
-	}
+	adaptersTable.SetTitleColor(titleColor)
+	streamsTable.SetTitleColor(titleColor)
+	logTable.SetTitleColor(titleColor)
 }
 
 func dashboardGetLogMaxRows(logTable *tview.Table) int {
+	if logTable == nil {
+		return 1
+	}
+
 	_, _, _, height := logTable.GetInnerRect()
 	if height <= 0 {
 		return 1

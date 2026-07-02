@@ -85,7 +85,6 @@ func dashboardHandleKeys(
 	}
 
 	switch event.Key() {
-
 	case tcell.KeyCtrlA:
 		dashboardRunAction(actions.MarkAllStreams)
 		return true
@@ -98,6 +97,10 @@ func dashboardHandleKeys(
 		dashboardRunAction(actions.Restart)
 		return true
 
+	case tcell.KeyF4:
+		dashboardRunAction(actions.EditItem)
+		return true
+
 	case tcell.KeyF5:
 		dashboardRunAction(actions.Reload)
 		return true
@@ -107,9 +110,7 @@ func dashboardHandleKeys(
 		return true
 
 	case tcell.KeyF7:
-		if actions.NewItem != nil {
-			actions.NewItem()
-		}
+		dashboardRunAction(actions.NewItem)
 		return true
 
 	case tcell.KeyF8, tcell.KeyDelete:
@@ -117,9 +118,7 @@ func dashboardHandleKeys(
 		return true
 
 	case tcell.KeyInsert:
-		if actions.ToggleStreamMark != nil {
-			actions.ToggleStreamMark()
-		}
+		dashboardRunAction(actions.ToggleStreamMark)
 		return true
 
 	case tcell.KeyF9:
@@ -130,12 +129,6 @@ func dashboardHandleKeys(
 		dashboardRunAction(actions.Quit)
 		return true
 
-	case tcell.KeyRune:
-		if event.Rune() == ' ' {
-			dashboardRunAction(actions.RestartItem)
-			return true
-		}
-
 	case tcell.KeyTab:
 		dashboardTogglePane(actions)
 		return true
@@ -143,21 +136,21 @@ func dashboardHandleKeys(
 	case tcell.KeyBacktab:
 		dashboardTogglePaneBack(actions)
 		return true
+	}
 
-	case tcell.KeyEnter:
-		if actions.EditItem != nil {
-			actions.EditItem()
+	switch event.Key() {
+	case tcell.KeyRune:
+		if event.Rune() == ' ' {
+			dashboardRunAction(actions.RestartItem)
+			return true
 		}
+
+	case tcell.KeyEsc:
+		dashboardRunAction(actions.Back)
 		return true
 	}
 
 	if handleGlobalKeys != nil && handleGlobalKeys(event) {
-		return true
-	}
-
-	switch event.Key() {
-	case tcell.KeyEsc:
-		dashboardRunAction(actions.Back)
 		return true
 	}
 

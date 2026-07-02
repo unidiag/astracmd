@@ -21,6 +21,7 @@ func (ui *UI) ShowStreamDialog(
 	editStream *AstraStream,
 	existingStreams []AstraStream,
 	onOK func(AstraStream),
+	onCancel func(),
 	onError func(error),
 ) {
 	ui.pages.RemovePage(pageDialog)
@@ -35,6 +36,14 @@ func (ui *UI) ShowStreamDialog(
 		HbbtvURL: dHu,
 		Input:    []string{""},
 		Output:   []string{""},
+	}
+
+	cancel := func() {
+		ui.pages.RemovePage(pageDialog)
+
+		if onCancel != nil {
+			onCancel()
+		}
 	}
 
 	if isEdit {
@@ -327,7 +336,7 @@ func (ui *UI) ShowStreamDialog(
 
 		saveButton := tview.NewButton("Save").SetSelectedFunc(save)
 		cancelButton := tview.NewButton("Cancel").SetSelectedFunc(func() {
-			ui.pages.RemovePage(pageDialog)
+			cancel()
 		})
 
 		buttons := tview.NewFlex().
@@ -362,7 +371,7 @@ func (ui *UI) ShowStreamDialog(
 
 			switch event.Key() {
 			case tcell.KeyEsc:
-				ui.pages.RemovePage(pageDialog)
+				cancel()
 				return nil
 
 			case tcell.KeyTab:

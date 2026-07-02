@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -111,10 +110,6 @@ func webserver(port int) {
 //    ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝
 
 func terminalWebSocketHandler(w http.ResponseWriter, r *http.Request) {
-	if !terminalAllowed(r) {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
-	}
 
 	conn, err := terminalUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -209,33 +204,6 @@ func resizeTerminal(file *os.File, cols uint16, rows uint16) {
 	if err != nil {
 		log.Println("terminal resize:", err)
 	}
-}
-
-func terminalAllowed(r *http.Request) bool {
-
-	if debug {
-		return true
-	}
-
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return false
-	}
-
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return false
-	}
-
-	if ip.IsLoopback() {
-		return true
-	}
-
-	if ip.IsPrivate() {
-		return true
-	}
-
-	return false
 }
 
 func buildTerminalLoginCommand() *exec.Cmd {
