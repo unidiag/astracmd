@@ -1,6 +1,6 @@
-# astracmd
+# Astra Commander
 
-`astracmd` is a terminal dashboard for monitoring and managing Cesbo Astra instances.
+`Astra Commander` is a terminal dashboard for monitoring and managing Cesbo Astra instances.
 
 The application works directly with the Astra HTTP API and WebSocket API.
 It does not require a database.
@@ -27,6 +27,8 @@ It does not require a database.
 
 ## Compile
 ```bash
+cd ./web
+npm run build
 go build -o astracmd
 ```
 
@@ -34,4 +36,5 @@ go build -o astracmd
 ```bash
 ./astracmd
 ./astracmd /path/to/config/astracmd.ini
+./astracmd 5000
 ```
