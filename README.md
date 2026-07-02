@@ -26,9 +26,12 @@ It does not require a database.
 - Set Astra license
 
 ## Compile
+Need: `Golang 1.25.0` `NodeJS v.18.19.1`
 ```bash
 cd ./web
+npm update
 npm run build
+cd ..
 go build -o astracmd
 ```
 
