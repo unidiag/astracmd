@@ -31,10 +31,10 @@ func dashboardUpdateLogTitle(
 		return
 	}
 
-	title := " Log "
+	title := " LOG "
 
 	if debugLogEnabled {
-		title = " Log [debug] "
+		title = " DEBUG "
 	}
 
 	logTable.SetTitle(title)
