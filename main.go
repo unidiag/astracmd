@@ -3,42 +3,56 @@ package main
 import (
 	"log"
 	"os"
-
-	"github.com/rivo/tview"
+	"sync"
 )
 
 const (
 	APPNAME = "astracmd"
-	VERSION = "1.00"
-	BUILD   = "01.07.2026 00:00:00"
+	VERSION = "1.01"
+	BUILD   = "02.07.2026 13:11:27"
 )
 
-func main() {
-	configPath := getConfigPathFromArgs()
+type RunMode int
 
-	cfg, err := LoadConfig(configPath)
+const (
+	RunModeTUI RunMode = iota
+	RunModeWeb
+)
+
+var (
+	mu    sync.Mutex
+	debug = false
+	err   error
+)
+
+type AppArgs struct {
+	Mode       RunMode
+	ConfigPath string
+	Port       int
+}
+
+func main() {
+
+	debug = isRunThroughGoRun()
+
+	args, err := parseAppArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	app := tview.NewApplication()
-	app.EnableMouse(true)
-
-	ui := NewUI(app, cfg)
-
-	app.SetRoot(ui.pages, true)
-
-	ui.ShowConnections()
-
-	if err := app.Run(); err != nil {
+	cfg, err := LoadConfig(args.ConfigPath)
+	if err != nil {
 		log.Fatal(err)
 	}
-}
 
-func getConfigPathFromArgs() string {
-	if len(os.Args) > 1 && os.Args[1] != "" {
-		return os.Args[1]
+	switch args.Mode {
+	case RunModeWeb:
+		webserver(args.Port)
+
+	case RunModeTUI:
+		runTUI(cfg)
+
+	default:
+		log.Fatal("unknown run mode")
 	}
-
-	return DefaultConfigPath
 }
