@@ -229,6 +229,7 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 			conn,
 			editStream,
 			rt.currentConfig.Streams,
+			rt.currentConfig.Softcams,
 			func(saved AstraStream) {
 				rt.versionView.SetText(fmt.Sprintf(
 					"[green]Stream saved: %s[-]",

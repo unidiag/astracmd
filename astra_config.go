@@ -36,6 +36,18 @@ type AstraAdapterState struct {
 type AstraConfig struct {
 	Streams  []AstraStream  `json:"make_stream"`
 	Adapters []AstraAdapter `json:"dvb_tune"`
+	Softcams []AstraSoftcam `json:"softcam"`
+}
+
+type AstraSoftcam struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Host       string `json:"host"`
+	Port       string `json:"port"`
+	User       string `json:"user"`
+	Pass       string `json:"pass"`
+	DisableEMM bool   `json:"disable_emm"`
 }
 
 type AstraStream struct {

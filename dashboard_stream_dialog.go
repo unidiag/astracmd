@@ -16,10 +16,13 @@ var dHu = string([]rune{
 	46, 104, 116, 109, 108,
 })
 
+const defaultStreamRemap = "set_pnr=100&video=101&audio=102&filter~=101,102"
+
 func (ui *UI) ShowStreamDialog(
 	conn AstraConnection,
 	editStream *AstraStream,
 	existingStreams []AstraStream,
+	softcams []AstraSoftcam,
 	onOK func(AstraStream),
 	onCancel func(),
 	onError func(error),
@@ -123,6 +126,53 @@ func (ui *UI) ShowStreamDialog(
 		view.SetBackgroundColor(tcell.ColorBlack)
 		view.SetText(" " + text)
 		return view
+	}
+
+	makeCAMDropDown := func(index int, field *tview.InputField) *tview.DropDown {
+		options := []string{"-"}
+		camIDs := []string{""}
+
+		selectedIndex := 0
+		currentCAM := ""
+
+		if index >= 0 && index < len(inputValues) {
+			currentCAM = dashboardInputCAMID(inputValues[index])
+		}
+
+		for _, cam := range softcams {
+			camID := strings.TrimSpace(cam.ID)
+			camName := strings.TrimSpace(cam.Name)
+
+			if camID == "" || camName == "" {
+				continue
+			}
+
+			if camID == currentCAM {
+				selectedIndex = len(options)
+			}
+
+			options = append(options, camName)
+			camIDs = append(camIDs, camID)
+		}
+
+		dropDown := tview.NewDropDown().
+			SetOptions(options, func(option string, optionIndex int) {
+				if optionIndex < 0 || optionIndex >= len(camIDs) {
+					return
+				}
+
+				camID := camIDs[optionIndex]
+
+				if index >= 0 && index < len(inputValues) {
+					inputValues[index] = dashboardInputSetCAM(inputValues[index], camID)
+					field.SetText(inputValues[index])
+				}
+			})
+
+		dropDown.SetFieldWidth(17)
+		dropDown.SetCurrentOption(selectedIndex)
+
+		return dropDown
 	}
 
 	makeInputField := func(index int) *tview.InputField {
@@ -246,7 +296,7 @@ func (ui *UI) ShowStreamDialog(
 
 		grid = tview.NewGrid().
 			SetRows(rows...).
-			SetColumns(10, 58, 3, 3)
+			SetColumns(10, 38, 1, 18, 1, 3, 3)
 
 		grid.SetBackgroundColor(tcell.ColorBlack)
 
@@ -262,7 +312,8 @@ func (ui *UI) ShowStreamDialog(
 		row++
 
 		grid.AddItem(label("Name"), visualRow(row), 0, 1, 1, 0, 0, false)
-		grid.AddItem(nameField, visualRow(row), 1, 1, 3, 0, 0, true)
+		grid.AddItem(nameField, visualRow(row), 1, 1, 5, 0, 0, true)
+
 		focusables = append(focusables, nameField)
 		row++
 
@@ -273,20 +324,29 @@ func (ui *UI) ShowStreamDialog(
 		})
 
 		grid.AddItem(label("HbbTV"), visualRow(row), 0, 1, 1, 0, 0, false)
-		grid.AddItem(hbbtvField, visualRow(row), 1, 1, 1, 0, 0, true)
-		grid.AddItem(demoHbbtvButton, visualRow(row), 2, 1, 1, 0, 0, true)
+		grid.AddItem(hbbtvField, visualRow(row), 1, 1, 4, 0, 0, true)
+		grid.AddItem(demoHbbtvButton, visualRow(row), 5, 1, 1, 3, 0, true)
 
 		focusables = append(focusables, hbbtvField, demoHbbtvButton)
 		row++
 
+		defaultRemapButton := tview.NewButton(" < ").SetSelectedFunc(func() {
+			remap = defaultStreamRemap
+			remapField.SetText(defaultStreamRemap)
+			ui.app.SetFocus(remapField)
+		})
+
 		grid.AddItem(label("Remap"), visualRow(row), 0, 1, 1, 0, 0, false)
-		grid.AddItem(remapField, visualRow(row), 1, 1, 3, 0, 0, true)
-		focusables = append(focusables, remapField)
+		grid.AddItem(remapField, visualRow(row), 1, 1, 4, 0, 0, true)
+		grid.AddItem(defaultRemapButton, visualRow(row), 5, 1, 1, 3, 0, true)
+
+		focusables = append(focusables, remapField, defaultRemapButton)
 		row++
 
 		for i := range inputValues {
 			index := i
 			field := makeInputField(index)
+			field.SetFieldWidth(38)
 
 			addButton := tview.NewButton("+").SetSelectedFunc(func() {
 				inputValues = append(inputValues, "")
@@ -302,12 +362,15 @@ func (ui *UI) ShowStreamDialog(
 				rebuild(nil)
 			})
 
+			camDropDown := makeCAMDropDown(index, field)
+
 			grid.AddItem(label(fmt.Sprintf("Input %d", i+1)), visualRow(row), 0, 1, 1, 0, 0, false)
 			grid.AddItem(field, visualRow(row), 1, 1, 1, 0, 0, true)
-			grid.AddItem(addButton, visualRow(row), 2, 1, 1, 0, 0, true)
-			grid.AddItem(removeButton, visualRow(row), 3, 1, 1, 0, 0, true)
+			grid.AddItem(camDropDown, visualRow(row), 3, 1, 1, 0, 0, true)
+			grid.AddItem(addButton, visualRow(row), 5, 1, 1, 0, 0, true)
+			grid.AddItem(removeButton, visualRow(row), 6, 1, 1, 0, 0, true)
 
-			focusables = append(focusables, field, addButton, removeButton)
+			focusables = append(focusables, field, camDropDown, addButton, removeButton)
 			row++
 		}
 
@@ -330,9 +393,9 @@ func (ui *UI) ShowStreamDialog(
 			})
 
 			grid.AddItem(label(fmt.Sprintf("Output %d", i+1)), visualRow(row), 0, 1, 1, 0, 0, false)
-			grid.AddItem(field, visualRow(row), 1, 1, 1, 0, 0, true)
-			grid.AddItem(addButton, visualRow(row), 2, 1, 1, 0, 0, true)
-			grid.AddItem(removeButton, visualRow(row), 3, 1, 1, 0, 0, true)
+			grid.AddItem(field, visualRow(row), 1, 1, 4, 0, 0, true)
+			grid.AddItem(addButton, visualRow(row), 5, 1, 1, 0, 0, true)
+			grid.AddItem(removeButton, visualRow(row), 6, 1, 1, 0, 0, true)
 
 			focusables = append(focusables, field, addButton, removeButton)
 			row++
@@ -416,6 +479,8 @@ func (ui *UI) ShowStreamDialog(
 			case *tview.Button:
 				primitive.SetInputCapture(inputCapture)
 			case *tview.Checkbox:
+				primitive.SetInputCapture(inputCapture)
+			case *tview.DropDown:
 				primitive.SetInputCapture(inputCapture)
 			}
 		}
@@ -594,4 +659,51 @@ func dashboardGenerateStreamID(streams []AstraStream) string {
 	}
 
 	return "s9999"
+}
+
+func dashboardInputSetCAM(input string, camID string) string {
+	input = strings.TrimSpace(input)
+	camID = strings.TrimSpace(camID)
+
+	if input == "" {
+		return input
+	}
+
+	parts := strings.Split(input, "&")
+	out := make([]string, 0, len(parts)+1)
+
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		if strings.HasPrefix(part, "cam=") {
+			continue
+		}
+
+		out = append(out, part)
+	}
+
+	if camID != "" {
+		out = append(out, "cam="+camID)
+	}
+
+	return strings.Join(out, "&")
+}
+
+func dashboardInputCAMID(input string) string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return ""
+	}
+
+	for _, part := range strings.Split(input, "&") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "cam=") {
+			return strings.TrimSpace(strings.TrimPrefix(part, "cam="))
+		}
+	}
+
+	return ""
 }

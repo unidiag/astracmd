@@ -63,8 +63,8 @@ func (ui *UI) ShowConnections() {
 	title.SetDynamicColors(true)
 	title.SetTextAlign(tview.AlignCenter)
 	title.SetText(fmt.Sprintf(
-		"[::b]%s[::-]  v%s\n[gray]BUILD: %s[-]\n[gray]CONFIG: %s[-]",
-		APPNAME,
+		"[::b]%s[::-] v%s\n[gray]BUILD: %s[-]\n[gray]CONFIG: %s[-]",
+		APPNAMEFULL,
 		VERSION,
 		BUILD,
 		ui.cfg.Path,
@@ -80,7 +80,7 @@ func (ui *UI) ShowConnections() {
 	for i := range ui.cfg.Connections {
 		conn := ui.cfg.Connections[i]
 
-		nameCell := tview.NewTableCell(conn.Name).
+		nameCell := tview.NewTableCell(" " + conn.Name).
 			SetTextColor(tcell.ColorWhite).
 			SetExpansion(1)
 
@@ -95,7 +95,7 @@ func (ui *UI) ShowConnections() {
 
 	newRow := len(ui.cfg.Connections)
 
-	newCell := tview.NewTableCell("(F7) + New connection").
+	newCell := tview.NewTableCell(" (F7) + New connection").
 		SetTextColor(tcell.ColorYellow).
 		SetExpansion(1)
 
@@ -155,7 +155,7 @@ func (ui *UI) ShowConnections() {
 	help := tview.NewTextView()
 	help.SetDynamicColors(true)
 	help.SetTextAlign(tview.AlignCenter)
-	help.SetText("[gray]Enter / Left click — open · F4 — edit · F7 — new · F8 — delete · ESC — quit[-]")
+	help.SetText("[gray]Enter — open · F4 — edit · F7 — new · F8 — delete · ESC — quit[-]")
 
 	body := tview.NewFlex()
 	body.SetDirection(tview.FlexRow)
