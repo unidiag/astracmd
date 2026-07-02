@@ -281,7 +281,7 @@ func BuildStreamsFromScan(
 			Output: nil,
 
 			// Use the same default HbbTV URL as in the new stream dialog.
-			HbbtvURL: dHu,
+			HbbtvURL: "",
 
 			// Default remap for scanned streams.
 			SetTSID:   "1",

@@ -33,7 +33,7 @@ func (ui *UI) ShowStreamDialog(
 		Name:     "",
 		Type:     "spts",
 		Enable:   true,
-		HbbtvURL: dHu,
+		HbbtvURL: "",
 		Input:    []string{""},
 		Output:   []string{""},
 	}
@@ -62,10 +62,6 @@ func (ui *UI) ShowStreamDialog(
 	if !strings.EqualFold(strings.TrimSpace(stream.Type), "spts") {
 		ui.ShowError(fmt.Sprintf("Unsupported stream type: %s", stream.Type), nil)
 		return
-	}
-
-	if !isEdit && strings.TrimSpace(stream.HbbtvURL) == "" {
-		stream.HbbtvURL = dHu
 	}
 
 	if len(stream.Input) == 0 {
@@ -270,9 +266,17 @@ func (ui *UI) ShowStreamDialog(
 		focusables = append(focusables, nameField)
 		row++
 
+		demoHbbtvButton := tview.NewButton(" < ").SetSelectedFunc(func() {
+			hbbtvURL = dHu
+			hbbtvField.SetText(dHu)
+			ui.app.SetFocus(hbbtvField)
+		})
+
 		grid.AddItem(label("HbbTV"), visualRow(row), 0, 1, 1, 0, 0, false)
-		grid.AddItem(hbbtvField, visualRow(row), 1, 1, 3, 0, 0, true)
-		focusables = append(focusables, hbbtvField)
+		grid.AddItem(hbbtvField, visualRow(row), 1, 1, 1, 0, 0, true)
+		grid.AddItem(demoHbbtvButton, visualRow(row), 2, 1, 1, 0, 0, true)
+
+		focusables = append(focusables, hbbtvField, demoHbbtvButton)
 		row++
 
 		grid.AddItem(label("Remap"), visualRow(row), 0, 1, 1, 0, 0, false)
