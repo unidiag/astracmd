@@ -9,7 +9,7 @@ import (
 const (
 	APPNAME = "astracmd"
 	VERSION = "1.01"
-	BUILD   = "02.07.2026 14:24:15"
+	BUILD   = "02.07.2026 14:57:14"
 )
 
 type RunMode int
