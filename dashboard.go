@@ -295,6 +295,26 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 		showStreamDialog(&stream)
 	}
 
+	openSelectedStreamAnalyzer := func() {
+		if rt.activePane != dashboardPaneStreams {
+			return
+		}
+
+		stream, ok := rt.SelectedStream()
+		if !ok {
+			return
+		}
+
+		ui.ShowStreamAnalyzerDialog(conn, stream)
+	}
+
+	openSelectedDashboardItem := func() {
+		switch rt.activePane {
+		case dashboardPaneStreams:
+			openSelectedStreamAnalyzer()
+		}
+	}
+
 	// ███╗   ██╗███████╗██╗    ██╗        ██╗    ███████╗██████╗ ██╗████████╗
 	// ████╗  ██║██╔════╝██║    ██║       ██╔╝    ██╔════╝██╔══██╗██║╚══██╔══╝
 	// ██╔██╗ ██║█████╗  ██║ █╗ ██║      ██╔╝     █████╗  ██║  ██║██║   ██║
@@ -607,6 +627,10 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 
 				Restart: func() {
 					confirmRestart()
+				},
+
+				OpenItem: func() {
+					openSelectedDashboardItem()
 				},
 
 				ToggleStreamMark: func() {

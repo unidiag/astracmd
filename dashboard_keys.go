@@ -14,6 +14,7 @@ type DashboardKeyActions struct {
 
 	NewItem  func()
 	EditItem func()
+	OpenItem func()
 
 	RestartItem func()
 	SoftCAM     func()
@@ -88,6 +89,10 @@ func dashboardHandleKeys(
 	switch event.Key() {
 	case tcell.KeyCtrlA:
 		dashboardRunAction(actions.MarkAllStreams)
+		return true
+
+	case tcell.KeyEnter:
+		dashboardRunAction(actions.OpenItem)
 		return true
 
 	case tcell.KeyF1:

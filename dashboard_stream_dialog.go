@@ -266,6 +266,7 @@ func (ui *UI) ShowStreamDialog(
 			remap,
 			inputValues,
 			outputValues,
+			ui.cfg.ServiceProvider(),
 		)
 		if err != nil {
 			ui.ShowError(err.Error(), root)
@@ -609,11 +610,19 @@ func dashboardBuildStreamFromForm(
 	remap string,
 	inputValues []string,
 	outputValues []string,
+	serviceProvider string,
 ) (AstraStream, error) {
 	base.Enable = enable
 	base.Name = strings.TrimSpace(name)
 	base.Type = "spts"
 	base.HbbtvURL = strings.TrimSpace(hbbtvURL)
+
+	serviceProvider = strings.TrimSpace(serviceProvider)
+	if serviceProvider == "" {
+		serviceProvider = APPNAMEFULL
+	}
+
+	base.ServiceProvider = serviceProvider
 
 	if base.Name == "" {
 		return AstraStream{}, fmt.Errorf("stream name is required")
@@ -641,7 +650,6 @@ func dashboardBuildStreamFromForm(
 	}
 
 	base.ServiceName = dashboardStreamServiceName(base.Name)
-	base.ServiceProvider = fmt.Sprintf("%s v.%s", APPNAME, VERSION)
 
 	return base, nil
 }

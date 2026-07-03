@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -21,6 +22,11 @@ type AstraWSClient struct {
 
 type AstraWSEnvelope struct {
 	Scope string `json:"scope"`
+}
+
+type AstraWSAuthEvent struct {
+	Scope string `json:"scope"`
+	ID    int64  `json:"id"`
 }
 
 type AstraWSLogEvent struct {
@@ -59,6 +65,11 @@ type AstraWSSysInfoEvent struct {
 }
 
 func AstraConnectWebSocket(ctx context.Context, conn AstraConnection) (*AstraWSClient, error) {
+	client, _, err := AstraConnectWebSocketWithID(ctx, conn)
+	return client, err
+}
+
+func AstraConnectWebSocketWithID(ctx context.Context, conn AstraConnection) (*AstraWSClient, int64, error) {
 	wsURL := url.URL{
 		Scheme: "ws",
 		Host:   conn.Addr(),
@@ -77,7 +88,11 @@ func AstraConnectWebSocket(ctx context.Context, conn AstraConnection) (*AstraWSC
 
 	ws, _, err := dialer.DialContext(ctx, wsURL.String(), headers)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	client := &AstraWSClient{
+		conn: ws,
 	}
 
 	authMessage := struct {
@@ -90,12 +105,61 @@ func AstraConnectWebSocket(ctx context.Context, conn AstraConnection) (*AstraWSC
 
 	if err := ws.WriteJSON(authMessage); err != nil {
 		_ = ws.Close()
-		return nil, err
+		return nil, 0, err
 	}
 
-	return &AstraWSClient{
-		conn: ws,
-	}, nil
+	wsID, err := client.readAuthID(ctx)
+	if err != nil {
+		_ = ws.Close()
+		return nil, 0, err
+	}
+
+	return client, wsID, nil
+}
+
+func (c *AstraWSClient) readAuthID(ctx context.Context) (int64, error) {
+	if c == nil || c.conn == nil {
+		return 0, fmt.Errorf("websocket client is nil")
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	_ = c.conn.SetReadDeadline(deadline)
+	defer func() {
+		_ = c.conn.SetReadDeadline(time.Time{})
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		default:
+		}
+
+		_, raw, err := c.conn.ReadMessage()
+		if err != nil {
+			return 0, err
+		}
+
+		var envelope AstraWSEnvelope
+		if err := json.Unmarshal(raw, &envelope); err != nil {
+			continue
+		}
+
+		if envelope.Scope != "auth" {
+			continue
+		}
+
+		var auth AstraWSAuthEvent
+		if err := json.Unmarshal(raw, &auth); err != nil {
+			return 0, err
+		}
+
+		if auth.ID <= 0 {
+			return 0, fmt.Errorf("invalid websocket auth id: %s", string(raw))
+		}
+
+		return auth.ID, nil
+	}
 }
 
 func (c *AstraWSClient) Close() error {
@@ -141,7 +205,6 @@ func (c *AstraWSClient) ReadLoop(ctx context.Context, out chan<- AstraWSMessage)
 		select {
 		case <-ctx.Done():
 			return
-
 		case out <- AstraWSMessage{Raw: data}:
 		}
 	}
