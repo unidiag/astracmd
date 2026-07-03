@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type AstraScanAddStreamsResult struct {
-	OK     bool
-	ScanID string
-	Count  int
-	Err    error
+	OK      bool
+	ScanID  string
+	Count   int
+	Streams []AstraStream
+	Err     error
 }
 
 type astraScanInitResponse struct {
@@ -97,41 +99,44 @@ func AstraScanAddStreams(
 	streams := BuildStreamsFromScan(adapter, existingStreams, scan.Scan)
 	if len(streams) == 0 {
 		return AstraScanAddStreamsResult{
-			OK:     false,
+			OK:     true,
 			ScanID: scanID,
-			Err:    fmt.Errorf("no TV streams found in scan result"),
+			Count:  0,
 		}
 	}
 
-	count := 0
+	addedStreams := make([]AstraStream, 0, len(streams))
 
 	for _, stream := range streams {
 		result := AstraSaveStream(ctx, conn, stream)
 		if !result.OK {
 			if result.Err != nil {
 				return AstraScanAddStreamsResult{
-					OK:     false,
-					ScanID: scanID,
-					Count:  count,
-					Err:    result.Err,
+					OK:      false,
+					ScanID:  scanID,
+					Count:   len(addedStreams),
+					Streams: addedStreams,
+					Err:     result.Err,
 				}
 			}
 
 			return AstraScanAddStreamsResult{
-				OK:     false,
-				ScanID: scanID,
-				Count:  count,
-				Err:    fmt.Errorf("stream save failed: %s", stream.DisplayName()),
+				OK:      false,
+				ScanID:  scanID,
+				Count:   len(addedStreams),
+				Streams: addedStreams,
+				Err:     fmt.Errorf("stream save failed: %s", stream.DisplayName()),
 			}
 		}
 
-		count++
+		addedStreams = append(addedStreams, stream)
 	}
 
 	return AstraScanAddStreamsResult{
-		OK:     true,
-		ScanID: scanID,
-		Count:  count,
+		OK:      true,
+		ScanID:  scanID,
+		Count:   len(addedStreams),
+		Streams: addedStreams,
 	}
 }
 
@@ -229,6 +234,7 @@ func BuildStreamsFromScan(
 ) []AstraStream {
 	serviceNames := make(map[int]string)
 	videoPNRs := make(map[int]bool)
+	existingPNRs := existingStreamPNRsByAdapter(adapter.ID, existingStreams)
 
 	for _, table := range tables {
 		switch strings.ToLower(strings.TrimSpace(table.PSI)) {
@@ -259,6 +265,10 @@ func BuildStreamsFromScan(
 	used = append(used, existingStreams...)
 
 	for _, pnr := range pnrs {
+		if existingPNRs[pnr] {
+			continue
+		}
+
 		channelName := strings.TrimSpace(serviceNames[pnr])
 		if channelName == "" {
 			channelName = fmt.Sprintf("PNR %d", pnr)
@@ -328,4 +338,87 @@ func astraScanHasVideo(streams []astraScanESStream) bool {
 	}
 
 	return false
+}
+
+func existingStreamPNRsByAdapter(adapterID string, streams []AstraStream) map[int]bool {
+	result := make(map[int]bool)
+
+	adapterID = strings.TrimSpace(adapterID)
+	if adapterID == "" {
+		return result
+	}
+
+	for _, stream := range streams {
+		for _, input := range stream.Input {
+			inputAdapterID, pnr, ok := parseDVBInputAdapterPNR(input)
+			if !ok {
+				continue
+			}
+
+			if inputAdapterID != adapterID {
+				continue
+			}
+
+			result[pnr] = true
+		}
+	}
+
+	return result
+}
+
+func parseDVBInputAdapterPNR(input string) (string, int, bool) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return "", 0, false
+	}
+
+	const prefix = "dvb://"
+
+	if !strings.HasPrefix(input, prefix) {
+		return "", 0, false
+	}
+
+	rest := strings.TrimPrefix(input, prefix)
+
+	adapterEnd := strings.IndexAny(rest, "#?")
+	if adapterEnd < 0 {
+		return "", 0, false
+	}
+
+	adapterID := strings.TrimSpace(rest[:adapterEnd])
+	if adapterID == "" {
+		return "", 0, false
+	}
+
+	params := rest[adapterEnd+1:]
+	pnr, ok := parsePNRFromInputParams(params)
+	if !ok {
+		return "", 0, false
+	}
+
+	return adapterID, pnr, true
+}
+
+func parsePNRFromInputParams(params string) (int, bool) {
+	for _, part := range strings.FieldsFunc(params, func(r rune) bool {
+		return r == '&' || r == ';' || r == ',' || r == '#'
+	}) {
+		key, value, ok := strings.Cut(part, "=")
+		if !ok {
+			continue
+		}
+
+		if !strings.EqualFold(strings.TrimSpace(key), "pnr") {
+			continue
+		}
+
+		pnr, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || pnr <= 0 {
+			return 0, false
+		}
+
+		return pnr, true
+	}
+
+	return 0, false
 }

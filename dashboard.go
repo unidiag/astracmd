@@ -228,6 +228,29 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 		showAdapterDialog(nil)
 	}
 
+	openSelectedAdapterAnalyzer := func() {
+		if rt.activePane != dashboardPaneAdapters {
+			return
+		}
+
+		adapter, ok := rt.SelectedAdapter()
+		if !ok {
+			return
+		}
+
+		ui.ShowAdapterAnalyzerDialog(
+			conn,
+			adapter,
+			rt.currentConfig.Streams,
+			func(adapter AstraAdapter, count int) {
+				loadAstraConfig()
+			},
+			func(err error) {
+				ui.ShowError(err.Error(), ui.app.GetFocus())
+			},
+		)
+	}
+
 	editSelectedAdapter := func() {
 		if rt.activePane != dashboardPaneAdapters {
 			return
@@ -310,6 +333,9 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 
 	openSelectedDashboardItem := func() {
 		switch rt.activePane {
+		case dashboardPaneAdapters:
+			openSelectedAdapterAnalyzer()
+
 		case dashboardPaneStreams:
 			openSelectedStreamAnalyzer()
 		}
