@@ -31,6 +31,39 @@ func dashboardGenerateSoftcamID(existing []AstraSoftcam) string {
 	return "cam"
 }
 
+func dashboardIsSoftcamKeyInput(value string) bool {
+	if len(value) > 28 {
+		return false
+	}
+
+	for _, r := range value {
+		if r >= '0' && r <= '9' {
+			continue
+		}
+
+		if r >= 'a' && r <= 'f' {
+			continue
+		}
+
+		if r >= 'A' && r <= 'F' {
+			continue
+		}
+
+		return false
+	}
+
+	return true
+}
+
+func dashboardIsSoftcamKeyValid(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return true
+	}
+
+	return len(value) == 28 && dashboardIsSoftcamKeyInput(value)
+}
+
 func (ui *UI) ShowSoftCAMDialog(
 	conn AstraConnection,
 	config AstraConfig,
@@ -54,6 +87,7 @@ func (ui *UI) ShowSoftCAMDialog(
 	port := strings.TrimSpace(cam.Port)
 	login := strings.TrimSpace(cam.User)
 	password := strings.TrimSpace(cam.Pass)
+	key := strings.TrimSpace(cam.Key)
 	disableEMM := cam.DisableEMM
 	remove := false
 
@@ -163,6 +197,19 @@ func (ui *UI) ShowSoftCAMDialog(
 			password = value
 		})
 
+	keyField := tview.NewInputField().
+		SetText(key).
+		SetFieldWidth(64).
+		SetAcceptanceFunc(func(value string, lastChar rune) bool {
+			return dashboardIsSoftcamKeyInput(value)
+		}).
+		SetChangedFunc(func(value string) {
+			if isUpdating {
+				return
+			}
+			key = value
+		})
+
 	disableEMMField := tview.NewCheckbox().
 		SetChecked(disableEMM).
 		SetChangedFunc(func(value bool) {
@@ -189,6 +236,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		port = strings.TrimSpace(item.Port)
 		login = strings.TrimSpace(item.User)
 		password = strings.TrimSpace(item.Pass)
+		key = strings.TrimSpace(item.Key)
 		disableEMM = item.DisableEMM
 		remove = false
 
@@ -197,6 +245,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		portField.SetText(port)
 		loginField.SetText(login)
 		passwordField.SetText(password)
+		keyField.SetText(key)
 		disableEMMField.SetChecked(disableEMM)
 		removeField.SetChecked(remove)
 
@@ -226,6 +275,7 @@ func (ui *UI) ShowSoftCAMDialog(
 	form.AddFormItem(portField.SetLabel("PORT"))
 	form.AddFormItem(loginField.SetLabel("LOGIN"))
 	form.AddFormItem(passwordField.SetLabel("PASSWORD"))
+	form.AddFormItem(keyField.SetLabel("KEY"))
 	form.AddFormItem(disableEMMField.SetLabel("Disable EMM"))
 	form.AddFormItem(removeField.SetLabel("[red]Remove[-]"))
 
@@ -311,6 +361,13 @@ func (ui *UI) ShowSoftCAMDialog(
 			currentType = "newcamd"
 		}
 
+		key = strings.TrimSpace(key)
+
+		if !dashboardIsSoftcamKeyValid(key) {
+			ui.ShowError("SoftCAM key must be empty or exactly 28 HEX characters", form)
+			return
+		}
+
 		savedCam := AstraSoftcam{
 			ID:         currentID,
 			Name:       strings.TrimSpace(name),
@@ -319,6 +376,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			Port:       strings.TrimSpace(port),
 			User:       strings.TrimSpace(login),
 			Pass:       strings.TrimSpace(password),
+			Key:        strings.TrimSpace(key),
 			DisableEMM: disableEMM,
 		}
 
@@ -456,6 +514,13 @@ func (ui *UI) ShowSoftCAMDialog(
 			currentType = "newcamd"
 		}
 
+		key = strings.TrimSpace(key)
+
+		if !dashboardIsSoftcamKeyValid(key) {
+			showSoftCAMTestModal("SoftCAM test failed", "SoftCAM key must be empty or exactly 28 HEX characters")
+			return
+		}
+
 		testCam := AstraSoftcam{
 			ID:         currentID,
 			Name:       strings.TrimSpace(name),
@@ -464,6 +529,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			Port:       strings.TrimSpace(port),
 			User:       strings.TrimSpace(login),
 			Pass:       strings.TrimSpace(password),
+			Key:        strings.TrimSpace(key),
 			DisableEMM: disableEMM,
 		}
 
@@ -556,6 +622,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			Port:       strings.TrimSpace(port),
 			User:       strings.TrimSpace(login),
 			Pass:       strings.TrimSpace(password),
+			Key:        strings.TrimSpace(key),
 			DisableEMM: disableEMM,
 		}
 
@@ -692,6 +759,6 @@ func (ui *UI) ShowSoftCAMDialog(
 		return event
 	})
 
-	ui.pages.AddPage(pageDialog, centerPrimitive(form, 88, 22), true, true)
+	ui.pages.AddPage(pageDialog, centerPrimitive(form, 88, 24), true, true)
 	ui.app.SetFocus(form)
 }

@@ -87,6 +87,7 @@ type AstraSoftcam struct {
 	Port       string `json:"port"`
 	User       string `json:"user"`
 	Pass       string `json:"pass"`
+	Key        string `json:"key,omitempty"`
 	DisableEMM bool   `json:"disable_emm,omitempty"`
 }
 

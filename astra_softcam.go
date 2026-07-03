@@ -20,6 +20,7 @@ type astraSetSoftcamPayload struct {
 	Port       string `json:"port"`
 	User       string `json:"user"`
 	Pass       string `json:"pass"`
+	Key        string `json:"key,omitempty"`
 	DisableEMM bool   `json:"disable_emm"`
 }
 
@@ -181,6 +182,7 @@ func AstraSaveSoftcam(
 			Port:       strings.TrimSpace(softcam.Port),
 			User:       strings.TrimSpace(softcam.User),
 			Pass:       strings.TrimSpace(softcam.Pass),
+			Key:        strings.TrimSpace(softcam.Key),
 			DisableEMM: softcam.DisableEMM,
 		},
 	}
