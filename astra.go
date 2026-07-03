@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const astraRequestTimeout = 3 * time.Second
+const astraRequestTimeout = 10 * time.Second
 
 type AstraVersionResult struct {
 	Version string

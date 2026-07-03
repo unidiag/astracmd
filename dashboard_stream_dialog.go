@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -139,9 +140,28 @@ func (ui *UI) ShowStreamDialog(
 			currentCAM = dashboardInputCAMID(inputValues[index])
 		}
 
-		for _, cam := range softcams {
+		sortedIndexes := make([]int, 0, len(softcams))
+		for i := range softcams {
+			sortedIndexes = append(sortedIndexes, i)
+		}
+
+		sort.SliceStable(sortedIndexes, func(i, j int) bool {
+			left := strings.ToLower(strings.TrimSpace(softcams[sortedIndexes[i]].DisplayName()))
+			right := strings.ToLower(strings.TrimSpace(softcams[sortedIndexes[j]].DisplayName()))
+
+			if left == right {
+				return strings.TrimSpace(softcams[sortedIndexes[i]].ID) <
+					strings.TrimSpace(softcams[sortedIndexes[j]].ID)
+			}
+
+			return left < right
+		})
+
+		for _, sourceIndex := range sortedIndexes {
+			cam := softcams[sourceIndex]
+
 			camID := strings.TrimSpace(cam.ID)
-			camName := strings.TrimSpace(cam.Name)
+			camName := strings.TrimSpace(cam.DisplayName())
 
 			if camID == "" || camName == "" {
 				continue
@@ -151,7 +171,7 @@ func (ui *UI) ShowStreamDialog(
 				selectedIndex = len(options)
 			}
 
-			options = append(options, camName)
+			options = append(options, tview.Escape(camName))
 			camIDs = append(camIDs, camID)
 		}
 

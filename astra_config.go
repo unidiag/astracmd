@@ -34,20 +34,10 @@ type AstraAdapterState struct {
 }
 
 type AstraConfig struct {
+	GID      int64          `json:"gid"`
 	Streams  []AstraStream  `json:"make_stream"`
 	Adapters []AstraAdapter `json:"dvb_tune"`
 	Softcams []AstraSoftcam `json:"softcam"`
-}
-
-type AstraSoftcam struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	Host       string `json:"host"`
-	Port       string `json:"port"`
-	User       string `json:"user"`
-	Pass       string `json:"pass"`
-	DisableEMM bool   `json:"disable_emm"`
 }
 
 type AstraStream struct {
@@ -87,6 +77,31 @@ type AstraAdapter struct {
 	Lof2         string `json:"lof2"`
 	Slof         string `json:"slof"`
 	Enable       bool   `json:"enable"`
+}
+
+type AstraSoftcam struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Host       string `json:"host"`
+	Port       string `json:"port"`
+	User       string `json:"user"`
+	Pass       string `json:"pass"`
+	DisableEMM bool   `json:"disable_emm,omitempty"`
+}
+
+func (c AstraSoftcam) DisplayName() string {
+	name := strings.TrimSpace(c.Name)
+	if name != "" {
+		return name
+	}
+
+	id := strings.TrimSpace(c.ID)
+	if id != "" {
+		return id
+	}
+
+	return "New SoftCAM"
 }
 
 func BuildAdapterStreamMap(cfg AstraConfig) map[string][]AstraStream {

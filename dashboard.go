@@ -79,6 +79,18 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 		)
 	}
 
+	ui.ShowSoftCAMDialog(
+		conn,
+		rt.currentConfig,
+		func() {
+			loadAstraConfig()
+		},
+		func() {
+			rt.RenderTables()
+			rt.UpdateBorders()
+		},
+	)
+
 	setAstraDebugLog := func(enabled bool) {
 		dashboardSetDebugLogAsync(
 			context.Background(),
@@ -161,6 +173,20 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 		)
 	}
 
+	showSoftCAMDialog := func() {
+		ui.ShowSoftCAMDialog(
+			conn,
+			rt.currentConfig,
+			func() {
+				loadAstraConfig()
+			},
+			func() {
+				rt.RenderTables()
+				rt.UpdateBorders()
+			},
+		)
+	}
+
 	//  █████╗ ██████╗  █████╗ ██████╗ ████████╗███████╗██████╗     ██████╗ ██╗ █████╗ ██╗      ██████╗  ██████╗
 	// ██╔══██╗██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██╔══██╗    ██╔══██╗██║██╔══██╗██║     ██╔═══██╗██╔════╝
 	// ███████║██║  ██║███████║██████╔╝   ██║   █████╗  ██████╔╝    ██║  ██║██║███████║██║     ██║   ██║██║  ███╗
@@ -223,25 +249,23 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 	// ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝    ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝
 
 	showStreamDialog := func(editStream *AstraStream) {
-		activePane := rt.activePane
-
 		ui.ShowStreamDialog(
 			conn,
 			editStream,
 			rt.currentConfig.Streams,
 			rt.currentConfig.Softcams,
 			func(saved AstraStream) {
+				activePane := rt.activePane
 				rt.versionView.SetText(fmt.Sprintf(
 					"[green]Stream saved: %s[-]",
 					tview.Escape(saved.DisplayName()),
 				))
-
 				loadAstraConfigAfter(func() {
 					rt.SetActivePane(activePane)
 				})
 			},
 			func() {
-				rt.SetActivePane(activePane)
+				rt.RenderTables()
 			},
 			func(err error) {
 				ui.ShowError(err.Error(), nil)
@@ -521,6 +545,12 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 				confirmRestart()
 			},
 		},
+		3: {
+			Label: "SoftCAM",
+			Handle: func() {
+				showSoftCAMDialog()
+			},
+		},
 		4: {
 			Label: "Edit",
 			Handle: func() {
@@ -581,6 +611,10 @@ func (ui *UI) ShowDashboard(conn AstraConnection) {
 
 				ToggleStreamMark: func() {
 					rt.ToggleSelectedStreamMark()
+				},
+
+				SoftCAM: func() {
+					showSoftCAMDialog()
 				},
 
 				Reload: func() {

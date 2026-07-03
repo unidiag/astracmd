@@ -284,10 +284,10 @@ func BuildStreamsFromScan(
 			HbbtvURL: "",
 
 			// Default remap for scanned streams.
-			SetTSID:   "1",
-			SetPNR:    "100",
-			Map:       "video=101,audio=102",
-			FilterNot: "101,102",
+			// SetTSID:   "1",
+			// SetPNR:    "100",
+			// Map:       "video=101,audio=102",
+			// FilterNot: "101,102",
 
 			ServiceName:     dashboardStreamServiceName(channelName),
 			ServiceProvider: fmt.Sprintf("%s v.%s", APPNAME, VERSION),

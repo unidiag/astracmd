@@ -404,13 +404,45 @@ func (rt *DashboardRuntime) MarkAllVisibleStreams() {
 		return
 	}
 
+	allMarked := true
+	hasStreams := false
+
 	for _, stream := range rt.visibleStreams {
 		streamID := strings.TrimSpace(stream.ID)
 		if streamID == "" {
 			continue
 		}
 
-		rt.selectedStreamIDs[streamID] = true
+		hasStreams = true
+
+		if !rt.selectedStreamIDs[streamID] {
+			allMarked = false
+			break
+		}
+	}
+
+	if !hasStreams {
+		return
+	}
+
+	if allMarked {
+		for _, stream := range rt.visibleStreams {
+			streamID := strings.TrimSpace(stream.ID)
+			if streamID == "" {
+				continue
+			}
+
+			delete(rt.selectedStreamIDs, streamID)
+		}
+	} else {
+		for _, stream := range rt.visibleStreams {
+			streamID := strings.TrimSpace(stream.ID)
+			if streamID == "" {
+				continue
+			}
+
+			rt.selectedStreamIDs[streamID] = true
+		}
 	}
 
 	rt.RenderStreams()

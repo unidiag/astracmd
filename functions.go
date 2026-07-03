@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/fatih/color"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -462,4 +463,15 @@ func parseWebPort(value string) (int, bool) {
 	}
 
 	return port, true
+}
+
+func debugSave(some any) {
+	if !debug {
+		return
+	}
+
+	text := "DEBUG " + time.Now().Format("2006-01-02 15:04:05") + "\n\n"
+	text += spew.Sdump(some)
+
+	_ = os.WriteFile("debug.txt", []byte(text), 0644)
 }
