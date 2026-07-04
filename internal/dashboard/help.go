@@ -1,4 +1,9 @@
-package main
+package dashboard
+
+import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+)
 
 const HelpText = `[::b]astracmd help[::-]
 
@@ -169,3 +174,55 @@ Custom config path can be passed as the first argument:
 
   ./astracmd /etc/astracmd/conf.ini
 `
+
+func ShowHelp(opt Options) {
+	text := tview.NewTextView()
+	text.SetDynamicColors(true)
+	text.SetScrollable(true)
+	text.SetWrap(true)
+	text.SetText(HelpText)
+	text.SetBorder(true)
+	text.SetTitle(" Help ")
+	text.SetTitleAlign(tview.AlignCenter)
+
+	footer := tview.NewTextView()
+	footer.SetDynamicColors(true)
+	footer.SetTextAlign(tview.AlignCenter)
+	footer.SetText("[gray]Esc — close · Up/Down/PgUp/PgDn — scroll · F10 — quit[-]")
+
+	body := tview.NewFlex()
+	body.SetDirection(tview.FlexRow)
+	body.AddItem(text, 0, 1, true)
+	body.AddItem(footer, 1, 0, false)
+
+	body.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if opt.HandleGlobalKeys(event) {
+			return nil
+		}
+
+		switch event.Key() {
+		case tcell.KeyEsc:
+			opt.Pages.RemovePage(PageDialog)
+			return nil
+		}
+
+		return event
+	})
+
+	text.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if opt.HandleGlobalKeys(event) {
+			return nil
+		}
+
+		switch event.Key() {
+		case tcell.KeyEsc:
+			opt.Pages.RemovePage(PageDialog)
+			return nil
+		}
+
+		return event
+	})
+
+	opt.Pages.AddPage(PageDialog, centerPrimitive(body, 90, 28), true, true)
+	opt.App.SetFocus(text)
+}

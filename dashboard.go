@@ -148,7 +148,6 @@ func (ui *UI) dashboardOptions(conn astra.Connection) dashboard.Options {
 		SetMain: ui.setMain,
 
 		ShowError:       ui.ShowError,
-		ShowHelp:        ui.ShowHelp,
 		ShowConnections: ui.ShowConnections,
 		Quit:            ui.Quit,
 
