@@ -570,7 +570,7 @@ func Show(opt Options) {
 		1: {
 			Label: "Help",
 			Handle: func() {
-				opt.ShowHelp()
+				ShowHelp(opt)
 			},
 		},
 		2: {
@@ -636,7 +636,7 @@ func Show(opt Options) {
 			event,
 			DashboardKeyActions{
 				ShowHelp: func() {
-					opt.ShowHelp()
+					ShowHelp(opt)
 				},
 
 				Restart: func() {

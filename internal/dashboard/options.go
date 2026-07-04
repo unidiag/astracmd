@@ -44,7 +44,6 @@ type Options struct {
 	SetMain func(root tview.Primitive)
 
 	ShowError       func(message string, returnFocus tview.Primitive)
-	ShowHelp        func()
 	ShowConnections func()
 	Quit            func()
 
