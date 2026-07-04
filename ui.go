@@ -147,13 +147,13 @@ func (ui *UI) ShowConnections() {
 			ui.Quit()
 			return nil
 
-		case tcell.KeyF7:
+		case tcell.KeyF3:
 			if !dashboard.CanChangeConnections() {
 				ui.ShowRestrictedConnectionsError(table)
 				return nil
 			}
 
-			ui.ShowConnectionForm(nil)
+			ui.ShowReaders()
 			return nil
 
 		case tcell.KeyF4:
@@ -167,6 +167,15 @@ func (ui *UI) ShowConnections() {
 				conn := ui.cfg.Connections[row]
 				ui.ShowConnectionForm(&conn)
 			}
+			return nil
+
+		case tcell.KeyF7:
+			if !dashboard.CanChangeConnections() {
+				ui.ShowRestrictedConnectionsError(table)
+				return nil
+			}
+
+			ui.ShowConnectionForm(nil)
 			return nil
 
 		case tcell.KeyF8, tcell.KeyDelete:
@@ -189,7 +198,7 @@ func (ui *UI) ShowConnections() {
 	help.SetDynamicColors(true)
 	help.SetTextAlign(tview.AlignCenter)
 	if dashboard.CanChangeConnections() {
-		help.SetText("[gray]Enter — open · F4 — edit · F7 — new · F8 — delete · ESC — quit[-]")
+		help.SetText("[gray]Enter — open · F3 — readers · F4 — edit · F7 — new · F8 — delete · ESC — quit[-]")
 	} else {
 		help.SetText("[gray]Enter — open · ESC — quit[-]")
 	}
