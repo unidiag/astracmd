@@ -4,17 +4,14 @@ import (
 	"embed"
 	"fmt"
 	"log"
-	"main/internal/astra"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/fatih/color"
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -76,194 +73,6 @@ func isRunThroughGoRun() bool {
 		return true
 	}
 	return false
-}
-
-type FunctionKeyAction struct {
-	Label  string
-	Handle func()
-}
-
-func (ui *UI) NewFunctionKeyBar(actions map[int]FunctionKeyAction) *tview.Table {
-	table := tview.NewTable()
-	table.SetSelectable(true, false)
-	table.SetEvaluateAllRows(true)
-
-	for i := 1; i <= 10; i++ {
-		action, active := actions[i]
-
-		label := ""
-		if active {
-			label = action.Label
-		}
-
-		buttonCol := (i - 1) * 2
-		spaceCol := buttonCol + 1
-
-		text := fmt.Sprintf(" F%d %-7s", i, label)
-
-		cell := tview.NewTableCell(text).
-			SetAlign(tview.AlignCenter).
-			SetExpansion(1).
-			SetSelectable(active)
-
-		if active {
-			if i == 2 {
-				cell.SetTextColor(tcell.ColorWhite)
-				cell.SetBackgroundColor(tcell.ColorRed)
-				cell.SetSelectedStyle(
-					tcell.StyleDefault.
-						Foreground(tcell.ColorWhite).
-						Background(tcell.ColorRed),
-				)
-			} else {
-				cell.SetTextColor(tcell.ColorWhite)
-				cell.SetBackgroundColor(tcell.ColorBlack)
-			}
-		} else {
-			cell.SetTextColor(dashboardDisabledColor)
-			cell.SetBackgroundColor(tcell.ColorBlack)
-		}
-
-		table.SetCell(0, buttonCol, cell)
-
-		if i < 10 {
-			spaceCell := tview.NewTableCell(" ").
-				SetTextColor(tcell.ColorBlack).
-				SetBackgroundColor(tcell.ColorBlack).
-				SetExpansion(0).
-				SetSelectable(false)
-
-			table.SetCell(0, spaceCol, spaceCell)
-		}
-	}
-
-	table.SetSelectedFunc(func(_ int, col int) {
-		if col%2 != 0 {
-			return
-		}
-
-		key := col/2 + 1
-
-		action, ok := actions[key]
-		if !ok || action.Handle == nil {
-			return
-		}
-
-		action.Handle()
-	})
-
-	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
-			return nil
-		}
-
-		if event.Key() == tcell.KeyF1 {
-			if action, ok := actions[1]; ok && action.Handle != nil {
-				action.Handle()
-				return nil
-			}
-		}
-
-		return event
-	})
-
-	return table
-}
-
-func formatUnixTime(ts int64) string {
-	if ts <= 0 {
-		return "unknown"
-	}
-
-	return time.Unix(ts, 0).Format("02.01.2006 15:04:05")
-}
-
-var logChannelNameRe = regexp.MustCompile(`\[([^\]]+)\]`)
-var logInputSuffixRe = regexp.MustCompile(`\s+[io]/\d+$`)
-
-func normalizeLogChannelName(value string) string {
-	return strings.TrimSpace(value)
-}
-
-func logItemMatchesStreamName(text string, streamName string) bool {
-	streamName = normalizeLogChannelName(streamName)
-	if streamName == "" {
-		return false
-	}
-
-	if strings.Contains(text, "["+streamName+"]") {
-		return true
-	}
-
-	if strings.Contains(text, "["+streamName+" i/") {
-		return true
-	}
-
-	if strings.Contains(text, "["+streamName+" o/") {
-		return true
-	}
-
-	return false
-}
-
-func logItemMatchesStream(text string, stream astra.Stream) bool {
-	return logItemMatchesStreamName(text, stream.DisplayName())
-}
-
-func FilterLogItemsByStreams(items []astra.AstraLogItem, streams []astra.Stream) []astra.AstraLogItem {
-	if len(streams) == 0 {
-		return nil
-	}
-
-	result := make([]astra.AstraLogItem, 0)
-
-	for _, item := range items {
-		for _, stream := range streams {
-			if logItemMatchesStream(item.Text, stream) {
-				result = append(result, item)
-				break
-			}
-		}
-	}
-
-	return result
-}
-
-func FilterLogItemsByStream(items []astra.AstraLogItem, stream astra.Stream) []astra.AstraLogItem {
-	result := make([]astra.AstraLogItem, 0)
-
-	for _, item := range items {
-		if logItemMatchesStream(item.Text, stream) {
-			result = append(result, item)
-		}
-	}
-
-	return result
-}
-
-var logDVBInputRe = regexp.MustCompile(`^dvb_input\s+(\d+):\d+$`)
-
-func extractLogBracketValue(text string) string {
-	match := logChannelNameRe.FindStringSubmatch(text)
-	if len(match) < 2 {
-		return ""
-	}
-
-	return strings.TrimSpace(match[1])
-}
-
-func isAdapterLogItem(item astra.AstraLogItem, adapterNumber int) bool {
-	match := logDVBInputRe.FindStringSubmatch(item.Text)
-	if len(match) < 2 {
-		return false
-	}
-
-	n, err := strconv.Atoi(match[1])
-	if err != nil {
-		return false
-	}
-
-	return n == adapterNumber
 }
 
 func runTUI(cfg *Config) {

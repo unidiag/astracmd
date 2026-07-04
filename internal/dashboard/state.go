@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 const (
 	dashboardPaneAdapters = iota

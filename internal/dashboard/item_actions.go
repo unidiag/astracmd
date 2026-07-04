@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 import (
 	"context"
@@ -26,7 +26,7 @@ func dashboardSetActionMessage(
 }
 
 func dashboardRunAsyncItemAction(
-	ui *UI,
+	opt Options,
 	versionView *tview.TextView,
 	startPrefix string,
 	donePrefix string,
@@ -39,9 +39,9 @@ func dashboardRunAsyncItemAction(
 	go func() {
 		err := action(context.Background())
 
-		ui.app.QueueUpdateDraw(func() {
+		opt.App.QueueUpdateDraw(func() {
 			if err != nil {
-				ui.ShowError(err.Error(), nil)
+				opt.ShowError(err.Error(), nil)
 				return
 			}
 

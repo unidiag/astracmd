@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 import (
 	"context"
@@ -12,7 +12,8 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ShowAdapterAnalyzerDialog(
+func ShowAdapterAnalyzerDialog(
+	opt Options,
 	conn astra.Connection,
 	adapter astra.Adapter,
 	existingStreams []astra.Stream,
@@ -21,7 +22,7 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 ) {
 	adapterID := strings.TrimSpace(adapter.ID)
 	if adapterID == "" {
-		ui.ShowError("Adapter ID is empty", nil)
+		opt.ShowError("Adapter ID is empty", nil)
 		return
 	}
 
@@ -71,7 +72,7 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 
 	closeDialog := func() {
 		cancel()
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 	}
 
 	runScan := func() {
@@ -96,7 +97,7 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 				scanDelay,
 			)
 
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				scanInProgress = false
 				footer.SetText("[gray]Space — scan & add new    Esc — close[-]")
 
@@ -141,7 +142,7 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 	}
 
 	body.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
+		if opt.HandleGlobalKeys(event) {
 			return nil
 		}
 
@@ -160,13 +161,14 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 		return event
 	})
 
-	ui.pages.AddPage(pageDialog, centerPrimitive(body, 72, 17), true, true)
-	ui.app.SetFocus(body)
+	opt.Pages.AddPage(PageDialog, centerPrimitive(body, 72, 17), true, true)
+	opt.App.SetFocus(body)
 
-	go ui.runAdapterAnalyzer(ctx, conn, adapter, status, table, statusFlags, bars)
+	go runAdapterAnalyzer(opt, ctx, conn, adapter, status, table, statusFlags, bars)
 }
 
-func (ui *UI) runAdapterAnalyzer(
+func runAdapterAnalyzer(
+	opt Options,
 	ctx context.Context,
 	conn astra.Connection,
 	adapter astra.Adapter,
@@ -177,7 +179,7 @@ func (ui *UI) runAdapterAnalyzer(
 ) {
 	ws, err := astra.AstraConnectWebSocket(ctx, conn)
 	if err != nil {
-		ui.app.QueueUpdateDraw(func() {
+		opt.App.QueueUpdateDraw(func() {
 			status.SetText("[red]WebSocket error[-]")
 			setAdapterAnalyzerError(table, err)
 		})
@@ -186,7 +188,7 @@ func (ui *UI) runAdapterAnalyzer(
 
 	defer ws.Close()
 
-	ui.app.QueueUpdateDraw(func() {
+	opt.App.QueueUpdateDraw(func() {
 		status.SetText("[green]WebSocket connected[-]")
 	})
 
@@ -197,7 +199,7 @@ func (ui *UI) runAdapterAnalyzer(
 
 	for msg := range messages {
 		if msg.Err != nil {
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				status.SetText("[red]WebSocket stopped[-]")
 				setAdapterAnalyzerError(table, msg.Err)
 			})
@@ -233,7 +235,7 @@ func (ui *UI) runAdapterAnalyzer(
 			Status:   event.Status,
 		}
 
-		ui.app.QueueUpdateDraw(func() {
+		opt.App.QueueUpdateDraw(func() {
 			status.SetText(formatAdapterAnalyzerStatus(adapterID, state))
 			statusFlags.SetText(formatAdapterStatusFlagsColored(state.Status))
 			setAdapterAnalyzerTable(table, state)

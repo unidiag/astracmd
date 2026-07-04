@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 import (
 	"context"
@@ -12,7 +12,8 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ShowAdapterDialog(
+func ShowAdapterDialog(
+	opt Options,
 	conn astra.Connection,
 	editAdapter *astra.Adapter,
 	existingAdapters []astra.Adapter,
@@ -21,7 +22,7 @@ func (ui *UI) ShowAdapterDialog(
 	onScanOK func(astra.Adapter, int),
 	onError func(error),
 ) {
-	ui.pages.RemovePage(pageDialog)
+	opt.Pages.RemovePage(PageDialog)
 
 	isEdit := editAdapter != nil
 
@@ -100,14 +101,14 @@ func (ui *UI) ShowAdapterDialog(
 			mode,
 		)
 		if err != nil {
-			ui.ShowError(err.Error(), ui.app.GetFocus())
+			opt.ShowError(err.Error(), opt.App.GetFocus())
 			return
 		}
 
 		go func() {
 			result := astra.AstraSaveAdapter(context.Background(), conn, parsed)
 
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				if !result.OK {
 					if result.Err != nil {
 						if onError != nil {
@@ -122,7 +123,7 @@ func (ui *UI) ShowAdapterDialog(
 					return
 				}
 
-				ui.pages.RemovePage(pageDialog)
+				opt.Pages.RemovePage(PageDialog)
 
 				if onOK != nil {
 					onOK(parsed)
@@ -165,9 +166,9 @@ func (ui *UI) ShowAdapterDialog(
 		}
 
 		scanButton.SetLabelColor(tcell.ColorBlack)
-		scanButton.SetBackgroundColor(dashboardDisabledColor)
+		scanButton.SetBackgroundColor(disabledColor)
 		scanButton.SetLabelColorActivated(tcell.ColorBlack)
-		scanButton.SetBackgroundColorActivated(dashboardDisabledColor)
+		scanButton.SetBackgroundColorActivated(disabledColor)
 	}
 
 	setScanButtonScanningStyle := func() {
@@ -206,7 +207,7 @@ func (ui *UI) ShowAdapterDialog(
 					frame := frames[index%len(frames)]
 					index++
 
-					ui.app.QueueUpdateDraw(func() {
+					opt.App.QueueUpdateDraw(func() {
 						if scanButton != nil {
 							scanButton.SetLabel("Scan " + frame)
 						}
@@ -245,7 +246,7 @@ func (ui *UI) ShowAdapterDialog(
 			mode,
 		)
 		if err != nil {
-			ui.ShowError(err.Error(), ui.app.GetFocus())
+			opt.ShowError(err.Error(), opt.App.GetFocus())
 			return
 		}
 
@@ -266,7 +267,7 @@ func (ui *UI) ShowAdapterDialog(
 		go func() {
 			result := astra.AstraScanAddStreams(context.Background(), conn, parsed, existingStreams, scanDelay)
 
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				scanInProgress = false
 				stopScanSpinner()
 
@@ -284,7 +285,7 @@ func (ui *UI) ShowAdapterDialog(
 					return
 				}
 
-				ui.pages.RemovePage(pageDialog)
+				opt.Pages.RemovePage(PageDialog)
 
 				if onScanOK != nil {
 					onScanOK(parsed, result.Count)
@@ -298,7 +299,7 @@ func (ui *UI) ShowAdapterDialog(
 	setScanButtonIdleStyle()
 
 	cancelButton := tview.NewButton("Cancel").SetSelectedFunc(func() {
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 	})
 
 	//
@@ -403,11 +404,11 @@ func (ui *UI) ShowAdapterDialog(
 		}
 
 		focusIndex = index
-		ui.app.SetFocus(focusables[focusIndex])
+		opt.App.SetFocus(focusables[focusIndex])
 	}
 
 	moveFocus := func(delta int) {
-		current := ui.app.GetFocus()
+		current := opt.App.GetFocus()
 
 		for i, item := range focusables {
 			if item == current {
@@ -420,13 +421,13 @@ func (ui *UI) ShowAdapterDialog(
 	}
 
 	inputCapture := func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
+		if opt.HandleGlobalKeys(event) {
 			return nil
 		}
 
 		switch event.Key() {
 		case tcell.KeyEsc:
-			ui.pages.RemovePage(pageDialog)
+			opt.Pages.RemovePage(PageDialog)
 			return nil
 
 		case tcell.KeyTab:
@@ -460,7 +461,7 @@ func (ui *UI) ShowAdapterDialog(
 
 	popup := newDashboardSolidBackground(root)
 
-	ui.pages.AddPage(pageDialog, centerPrimitive(popup, 82, 12), true, true)
+	opt.Pages.AddPage(PageDialog, centerPrimitive(popup, 82, 12), true, true)
 	setFocusByIndex(0)
 }
 

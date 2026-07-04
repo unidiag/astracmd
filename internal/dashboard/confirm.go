@@ -1,11 +1,12 @@
-package main
+package dashboard
 
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ShowDashboardConfirm(
+func ShowDashboardConfirm(
+	opt Options,
 	text string,
 	confirmLabel string,
 	width int,
@@ -17,7 +18,7 @@ func (ui *UI) ShowDashboardConfirm(
 	modal.AddButtons([]string{confirmLabel, "Cancel"})
 
 	modal.SetDoneFunc(func(_ int, label string) {
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 
 		if label != confirmLabel {
 			return
@@ -29,19 +30,19 @@ func (ui *UI) ShowDashboardConfirm(
 	})
 
 	modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
+		if opt.HandleGlobalKeys(event) {
 			return nil
 		}
 
 		switch event.Key() {
 		case tcell.KeyEsc:
-			ui.pages.RemovePage(pageDialog)
+			opt.Pages.RemovePage(PageDialog)
 			return nil
 		}
 
 		return event
 	})
 
-	ui.pages.AddPage(pageDialog, centerPrimitive(modal, width, height), true, true)
-	ui.app.SetFocus(modal)
+	opt.Pages.AddPage(PageDialog, centerPrimitive(modal, width, height), true, true)
+	opt.App.SetFocus(modal)
 }

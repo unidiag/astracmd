@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 )
 
 type DashboardRuntime struct {
-	ui     *UI
+	opt    Options
 	conn   astra.Connection
 	client *astra.Client
 	ctx    context.Context
@@ -52,13 +52,13 @@ type DashboardRuntime struct {
 }
 
 func NewDashboardRuntime(
-	ui *UI,
+	opt Options,
 	conn astra.Connection,
 	ctx context.Context,
 	cancel context.CancelFunc,
 ) *DashboardRuntime {
 	rt := &DashboardRuntime{
-		ui:     ui,
+		opt:    opt,
 		conn:   conn,
 		client: astra.NewClient(conn),
 		ctx:    ctx,
@@ -114,7 +114,7 @@ func (rt *DashboardRuntime) QueueUpdateDraw(fn func()) {
 		return
 	}
 
-	rt.ui.app.QueueUpdateDraw(fn)
+	rt.opt.App.QueueUpdateDraw(fn)
 }
 
 func (rt *DashboardRuntime) BuildRoot(functionKeys tview.Primitive) *tview.Flex {
@@ -266,10 +266,10 @@ func (rt *DashboardRuntime) SetActivePane(pane int) {
 
 	switch rt.activePane {
 	case dashboardPaneAdapters:
-		rt.ui.app.SetFocus(rt.adaptersTable)
+		rt.opt.App.SetFocus(rt.adaptersTable)
 
 	case dashboardPaneStreams:
-		rt.ui.app.SetFocus(rt.streamsTable)
+		rt.opt.App.SetFocus(rt.streamsTable)
 	}
 
 	rt.UpdateBorders()

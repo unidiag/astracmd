@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 import (
 	"context"
@@ -65,13 +65,14 @@ func dashboardIsSoftcamKeyValid(value string) bool {
 	return len(value) == 28 && dashboardIsSoftcamKeyInput(value)
 }
 
-func (ui *UI) ShowSoftCAMDialog(
+func ShowSoftCAMDialog(
+	opt Options,
 	conn astra.Connection,
 	config astra.Config,
 	onSaved func(),
 	onClose func(),
 ) {
-	ui.pages.RemovePage(pageDialog)
+	opt.Pages.RemovePage(PageDialog)
 
 	isUpdating := false
 	isNewCam := true
@@ -281,7 +282,7 @@ func (ui *UI) ShowSoftCAMDialog(
 	form.AddFormItem(removeField.SetLabel("[red]Remove[-]"))
 
 	closeDialog := func() {
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 		if onClose != nil {
 			onClose()
 		}
@@ -292,15 +293,15 @@ func (ui *UI) ShowSoftCAMDialog(
 			SetText(message).
 			AddButtons([]string{"OK"}).
 			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-				ui.pages.RemovePage(pageDialog + "_test")
-				ui.app.SetFocus(form)
+				opt.Pages.RemovePage(PageDialog + "_test")
+				opt.App.SetFocus(form)
 			})
 
 		modal.SetTitle(" " + title + " ")
 		modal.SetTitleAlign(tview.AlignCenter)
 
-		ui.pages.AddPage(pageDialog+"_test", modal, true, true)
-		ui.app.SetFocus(modal)
+		opt.Pages.AddPage(PageDialog+"_test", modal, true, true)
+		opt.App.SetFocus(modal)
 	}
 
 	formatSoftCAMTestSuccess := func(result astra.AstraTestSoftcamResult) string {
@@ -341,14 +342,14 @@ func (ui *UI) ShowSoftCAMDialog(
 			result := astra.AstraRemoveSoftcam(context.Background(), conn, config.GID, currentID)
 			if !result.OK {
 				if result.Err != nil {
-					ui.ShowError(result.Err.Error(), form)
+					opt.ShowError(result.Err.Error(), form)
 				} else {
-					ui.ShowError("SoftCAM remove failed", form)
+					opt.ShowError("SoftCAM remove failed", form)
 				}
 				return
 			}
 
-			ui.pages.RemovePage(pageDialog)
+			opt.Pages.RemovePage(PageDialog)
 
 			if onSaved != nil {
 				onSaved()
@@ -365,7 +366,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		key = strings.TrimSpace(key)
 
 		if !dashboardIsSoftcamKeyValid(key) {
-			ui.ShowError("SoftCAM key must be empty or exactly 28 HEX characters", form)
+			opt.ShowError("SoftCAM key must be empty or exactly 28 HEX characters", form)
 			return
 		}
 
@@ -382,41 +383,41 @@ func (ui *UI) ShowSoftCAMDialog(
 		}
 
 		if savedCam.Name == "" {
-			ui.ShowError("SoftCAM name is required", form)
+			opt.ShowError("SoftCAM name is required", form)
 			return
 		}
 
 		if savedCam.Host == "" {
-			ui.ShowError("SoftCAM address is required", form)
+			opt.ShowError("SoftCAM address is required", form)
 			return
 		}
 
 		if savedCam.Port == "" {
-			ui.ShowError("SoftCAM port is required", form)
+			opt.ShowError("SoftCAM port is required", form)
 			return
 		}
 
 		if savedCam.User == "" {
-			ui.ShowError("SoftCAM login is required", form)
+			opt.ShowError("SoftCAM login is required", form)
 			return
 		}
 
 		if savedCam.Pass == "" {
-			ui.ShowError("SoftCAM password is required", form)
+			opt.ShowError("SoftCAM password is required", form)
 			return
 		}
 
 		result := astra.AstraSaveSoftcam(context.Background(), conn, config.GID, savedCam)
 		if !result.OK {
 			if result.Err != nil {
-				ui.ShowError(result.Err.Error(), form)
+				opt.ShowError(result.Err.Error(), form)
 			} else {
-				ui.ShowError("SoftCAM save failed", form)
+				opt.ShowError("SoftCAM save failed", form)
 			}
 			return
 		}
 
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 
 		if onSaved != nil {
 			onSaved()
@@ -481,7 +482,7 @@ func (ui *UI) ShowSoftCAMDialog(
 					frame := frames[index%len(frames)]
 					index++
 
-					ui.app.QueueUpdateDraw(func() {
+					opt.App.QueueUpdateDraw(func() {
 						if testButton != nil {
 							testButton.SetLabel("TEST " + frame)
 						}
@@ -571,7 +572,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		go func() {
 			result := astra.AstraTestSoftcam(context.Background(), conn, testCam)
 
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				testInProgress = false
 				stopTestSpinner()
 
@@ -600,7 +601,7 @@ func (ui *UI) ShowSoftCAMDialog(
 	cloneSoftCAM := func() {
 		sourceID := strings.TrimSpace(cam.ID)
 		if sourceID == "" || isNewCam {
-			ui.ShowError("Select existing SoftCAM to clone", form)
+			opt.ShowError("Select existing SoftCAM to clone", form)
 			return
 		}
 
@@ -645,7 +646,7 @@ func (ui *UI) ShowSoftCAMDialog(
 	showSoftCAMStreamsModal := func(camID string) {
 		camID = strings.TrimSpace(camID)
 		if camID == "" {
-			ui.ShowError("SoftCAM id is empty", form)
+			opt.ShowError("SoftCAM id is empty", form)
 			return
 		}
 
@@ -704,26 +705,26 @@ func (ui *UI) ShowSoftCAMDialog(
 			SetText(b.String()).
 			AddButtons([]string{"OK"}).
 			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-				ui.pages.RemovePage(pageDialog + "_streams")
-				ui.app.SetFocus(form)
+				opt.Pages.RemovePage(PageDialog + "_streams")
+				opt.App.SetFocus(form)
 			})
 
 		modal.SetTitle(fmt.Sprintf("SoftCAM streams #%s\n\n", camID))
 		modal.SetTitleAlign(tview.AlignCenter)
 
-		ui.pages.AddPage(pageDialog+"_streams", modal, true, true)
-		ui.app.SetFocus(modal)
+		opt.Pages.AddPage(PageDialog+"_streams", modal, true, true)
+		opt.App.SetFocus(modal)
 	}
 
 	showStreams := func() {
 		if isNewCam {
-			ui.ShowError("Select existing SoftCAM to view streams", form)
+			opt.ShowError("Select existing SoftCAM to view streams", form)
 			return
 		}
 
 		camID := strings.TrimSpace(cam.ID)
 		if camID == "" {
-			ui.ShowError("SoftCAM id is empty", form)
+			opt.ShowError("SoftCAM id is empty", form)
 			return
 		}
 
@@ -747,7 +748,7 @@ func (ui *UI) ShowSoftCAMDialog(
 	setTestButtonIdleStyle()
 
 	form.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
+		if opt.HandleGlobalKeys(event) {
 			return nil
 		}
 
@@ -760,6 +761,6 @@ func (ui *UI) ShowSoftCAMDialog(
 		return event
 	})
 
-	ui.pages.AddPage(pageDialog, centerPrimitive(form, 88, 24), true, true)
-	ui.app.SetFocus(form)
+	opt.Pages.AddPage(PageDialog, centerPrimitive(form, 88, 24), true, true)
+	opt.App.SetFocus(form)
 }

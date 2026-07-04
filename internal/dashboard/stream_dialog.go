@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 import (
 	"context"
@@ -20,7 +20,8 @@ var dHu = string([]rune{
 
 const defaultStreamRemap = "set_pnr=100&video=101&audio=102&filter~=101,102"
 
-func (ui *UI) ShowStreamDialog(
+func ShowStreamDialog(
+	opt Options,
 	conn astra.Connection,
 	editStream *astra.Stream,
 	existingStreams []astra.Stream,
@@ -29,7 +30,7 @@ func (ui *UI) ShowStreamDialog(
 	onCancel func(),
 	onError func(error),
 ) {
-	ui.pages.RemovePage(pageDialog)
+	opt.Pages.RemovePage(PageDialog)
 
 	isEdit := editStream != nil
 
@@ -44,7 +45,7 @@ func (ui *UI) ShowStreamDialog(
 	}
 
 	cancel := func() {
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 
 		if onCancel != nil {
 			onCancel()
@@ -56,7 +57,7 @@ func (ui *UI) ShowStreamDialog(
 	}
 
 	if strings.EqualFold(strings.TrimSpace(stream.Type), "mpts") {
-		ui.ShowError("MPTS streams are not supported in this version of astracmd", nil)
+		opt.ShowError("MPTS streams are not supported in this version of astracmd", nil)
 		return
 	}
 
@@ -65,7 +66,7 @@ func (ui *UI) ShowStreamDialog(
 	}
 
 	if !strings.EqualFold(strings.TrimSpace(stream.Type), "spts") {
-		ui.ShowError(fmt.Sprintf("Unsupported stream type: %s", stream.Type), nil)
+		opt.ShowError(fmt.Sprintf("Unsupported stream type: %s", stream.Type), nil)
 		return
 	}
 
@@ -242,11 +243,11 @@ func (ui *UI) ShowStreamDialog(
 		}
 
 		focusIndex = index
-		ui.app.SetFocus(focusables[focusIndex])
+		opt.App.SetFocus(focusables[focusIndex])
 	}
 
 	moveFocus := func(delta int) {
-		current := ui.app.GetFocus()
+		current := opt.App.GetFocus()
 
 		for i, item := range focusables {
 			if item == current {
@@ -267,17 +268,17 @@ func (ui *UI) ShowStreamDialog(
 			remap,
 			inputValues,
 			outputValues,
-			ui.cfg.ServiceProvider(),
+			opt.ServiceProvider(),
 		)
 		if err != nil {
-			ui.ShowError(err.Error(), root)
+			opt.ShowError(err.Error(), root)
 			return
 		}
 
 		go func() {
 			result := astra.AstraSaveStream(context.Background(), conn, parsed)
 
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				if !result.OK {
 					if result.Err != nil {
 						if onError != nil {
@@ -292,7 +293,7 @@ func (ui *UI) ShowStreamDialog(
 					return
 				}
 
-				ui.pages.RemovePage(pageDialog)
+				opt.Pages.RemovePage(PageDialog)
 
 				if onOK != nil {
 					onOK(parsed)
@@ -342,7 +343,7 @@ func (ui *UI) ShowStreamDialog(
 		demoHbbtvButton := tview.NewButton(" < ").SetSelectedFunc(func() {
 			hbbtvURL = dHu
 			hbbtvField.SetText(dHu)
-			ui.app.SetFocus(hbbtvField)
+			opt.App.SetFocus(hbbtvField)
 		})
 
 		grid.AddItem(label("HbbTV"), visualRow(row), 0, 1, 1, 0, 0, false)
@@ -355,7 +356,7 @@ func (ui *UI) ShowStreamDialog(
 		defaultRemapButton := tview.NewButton(" < ").SetSelectedFunc(func() {
 			remap = defaultStreamRemap
 			remapField.SetText(defaultStreamRemap)
-			ui.app.SetFocus(remapField)
+			opt.App.SetFocus(remapField)
 		})
 
 		grid.AddItem(label("Remap"), visualRow(row), 0, 1, 1, 0, 0, false)
@@ -454,7 +455,7 @@ func (ui *UI) ShowStreamDialog(
 		root.SetBackgroundColor(tcell.ColorBlack)
 
 		inputCapture = func(event *tcell.EventKey) *tcell.EventKey {
-			if ui.HandleGlobalKeys(event) {
+			if opt.HandleGlobalKeys(event) {
 				return nil
 			}
 
@@ -509,11 +510,11 @@ func (ui *UI) ShowStreamDialog(
 
 		popup := newDashboardSolidBackground(root)
 
-		ui.pages.RemovePage(pageDialog)
-		ui.pages.AddPage(pageDialog, centerPrimitive(popup, 86, dashboardStreamDialogHeight(visualRowCount)), true, true)
+		opt.Pages.RemovePage(PageDialog)
+		opt.Pages.AddPage(PageDialog, centerPrimitive(popup, 86, dashboardStreamDialogHeight(visualRowCount)), true, true)
 
 		if preferredFocus != nil {
-			ui.app.SetFocus(preferredFocus)
+			opt.App.SetFocus(preferredFocus)
 			return
 		}
 
@@ -620,7 +621,8 @@ func dashboardBuildStreamFromForm(
 
 	serviceProvider = strings.TrimSpace(serviceProvider)
 	if serviceProvider == "" {
-		serviceProvider = APPNAMEFULL
+		//serviceProvider = APPNAMEFULL
+		serviceProvider = "Astra"
 	}
 
 	base.ServiceProvider = serviceProvider

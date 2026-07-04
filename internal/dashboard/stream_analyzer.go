@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 import (
 	"context"
@@ -13,10 +13,10 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ShowStreamAnalyzerDialog(conn astra.Connection, stream astra.Stream) {
+func ShowStreamAnalyzerDialog(opt Options, conn astra.Connection, stream astra.Stream) {
 	streamID := strings.TrimSpace(stream.ID)
 	if streamID == "" {
-		ui.ShowError("Stream ID is empty", nil)
+		opt.ShowError("Stream ID is empty", nil)
 		return
 	}
 
@@ -50,11 +50,11 @@ func (ui *UI) ShowStreamAnalyzerDialog(conn astra.Connection, stream astra.Strea
 
 	closeDialog := func() {
 		cancel()
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 	}
 
 	body.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
+		if opt.HandleGlobalKeys(event) {
 			return nil
 		}
 
@@ -67,13 +67,14 @@ func (ui *UI) ShowStreamAnalyzerDialog(conn astra.Connection, stream astra.Strea
 		return event
 	})
 
-	ui.pages.AddPage(pageDialog, centerPrimitive(body, 76, 26), true, true)
-	ui.app.SetFocus(body)
+	opt.Pages.AddPage(PageDialog, centerPrimitive(body, 76, 26), true, true)
+	opt.App.SetFocus(body)
 
-	go ui.runStreamAnalyzer(ctx, conn, stream, status, table)
+	go runStreamAnalyzer(opt, ctx, conn, stream, status, table)
 }
 
-func (ui *UI) runStreamAnalyzer(
+func runStreamAnalyzer(
+	opt Options,
 	ctx context.Context,
 	conn astra.Connection,
 	stream astra.Stream,
@@ -82,7 +83,7 @@ func (ui *UI) runStreamAnalyzer(
 ) {
 	ws, wsID, err := astra.AstraConnectWebSocketWithID(ctx, conn)
 	if err != nil {
-		ui.app.QueueUpdateDraw(func() {
+		opt.App.QueueUpdateDraw(func() {
 			status.SetText("[red]WebSocket error[-]")
 			setScanTableError(table, err)
 		})
@@ -93,14 +94,14 @@ func (ui *UI) runStreamAnalyzer(
 
 	initResult := astra.AstraStreamScanInit(ctx, conn, stream.ID, wsID)
 	if !initResult.OK {
-		ui.app.QueueUpdateDraw(func() {
+		opt.App.QueueUpdateDraw(func() {
 			status.SetText("[red]scan-init failed[-]")
 			setScanTableError(table, initResult.Err)
 		})
 		return
 	}
 
-	ui.app.QueueUpdateDraw(func() {
+	opt.App.QueueUpdateDraw(func() {
 		status.SetText(fmt.Sprintf(
 			"[green]scan-init OK[-] [gray]%s · ws:%d[-]",
 			tview.Escape(initResult.ScanID),
@@ -117,7 +118,7 @@ func (ui *UI) runStreamAnalyzer(
 
 	for msg := range messages {
 		if msg.Err != nil {
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				status.SetText("[red]WebSocket stopped[-]")
 				setScanTableError(table, msg.Err)
 			})
@@ -143,7 +144,7 @@ func (ui *UI) runStreamAnalyzer(
 				state.HasTotal = true
 				emptyFrames = 0
 
-				ui.app.QueueUpdateDraw(func() {
+				opt.App.QueueUpdateDraw(func() {
 					status.SetText(formatScanStatus(state.OnAir, state.Total.Scrambled, initResult.ScanID, wsID))
 					setScanAnalyzerTable(table, state)
 				})
@@ -160,7 +161,7 @@ func (ui *UI) runStreamAnalyzer(
 				state.Total = total
 				state.OnAir = totalEvent.Data.OnAir
 
-				ui.app.QueueUpdateDraw(func() {
+				opt.App.QueueUpdateDraw(func() {
 					status.SetText(formatScanStatus(state.OnAir, state.Total.Scrambled, initResult.ScanID, wsID))
 					setScanAnalyzerTable(table, state)
 				})
@@ -179,7 +180,7 @@ func (ui *UI) runStreamAnalyzer(
 
 		state.ApplyPSI(psiEvent.Data)
 
-		ui.app.QueueUpdateDraw(func() {
+		opt.App.QueueUpdateDraw(func() {
 			status.SetText(formatScanStatus(state.OnAir, state.Total.Scrambled, initResult.ScanID, wsID))
 			setScanAnalyzerTable(table, state)
 		})

@@ -1,33 +1,34 @@
-package main
+package dashboard
 
 import (
 	"context"
 	"fmt"
 	"main/internal/astra"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ConfirmRestartAstra(conn astra.Connection, onOK func(), onError func(error)) {
+func ConfirmRestartAstra(opt Options, conn astra.Connection, onOK func(), onError func(error)) {
 	modal := tview.NewModal()
 	modal.SetText("Are you sure restart Astra?")
 	modal.AddButtons([]string{"Restart", "Cancel"})
 
 	modal.SetDoneFunc(func(_ int, label string) {
 		if label != "Restart" {
-			ui.pages.RemovePage(pageDialog)
+			opt.Pages.RemovePage(PageDialog)
 			return
 		}
 
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 
 		go func() {
 			client := astra.NewClient(conn)
 			err := dashboardRestartAstra(context.Background(), client)
 
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				if err == nil {
 					if onOK != nil {
 						onOK()
@@ -43,24 +44,24 @@ func (ui *UI) ConfirmRestartAstra(conn astra.Connection, onOK func(), onError fu
 	})
 
 	modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
+		if opt.HandleGlobalKeys(event) {
 			return nil
 		}
 
 		switch event.Key() {
 		case tcell.KeyEsc:
-			ui.pages.RemovePage(pageDialog)
+			opt.Pages.RemovePage(PageDialog)
 			return nil
 		}
 
 		return event
 	})
 
-	ui.pages.AddPage(pageDialog, centerPrimitive(modal, 50, 10), true, true)
-	ui.app.SetFocus(modal)
+	opt.Pages.AddPage(PageDialog, centerPrimitive(modal, 50, 10), true, true)
+	opt.App.SetFocus(modal)
 }
 
-func (ui *UI) ShowLicenseDialog(conn astra.Connection, onOK func(), onError func(error)) {
+func ShowLicenseDialog(opt Options, conn astra.Connection, onOK func(), onError func(error)) {
 	license := ""
 
 	emailView := tview.NewTextView()
@@ -91,22 +92,22 @@ func (ui *UI) ShowLicenseDialog(conn astra.Connection, onOK func(), onError func
 		license = strings.TrimSpace(license)
 
 		if license == "" {
-			ui.ShowError("license is required", form)
+			opt.ShowError("license is required", form)
 			return
 		}
 
 		if !astra.IsValidLicense(license) {
-			ui.ShowError("license must be exactly 32 hex characters", form)
+			opt.ShowError("license must be exactly 32 hex characters", form)
 			return
 		}
 
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 
 		go func() {
 			client := astra.NewClient(conn)
 			result := client.SetLicense(context.Background(), license)
 
-			ui.app.QueueUpdateDraw(func() {
+			opt.App.QueueUpdateDraw(func() {
 				if result.OK {
 					if onOK != nil {
 						onOK()
@@ -122,7 +123,7 @@ func (ui *UI) ShowLicenseDialog(conn astra.Connection, onOK func(), onError func
 	})
 
 	form.AddButton("Cancel", func() {
-		ui.pages.RemovePage(pageDialog)
+		opt.Pages.RemovePage(PageDialog)
 	})
 
 	body := tview.NewFlex()
@@ -139,13 +140,13 @@ func (ui *UI) ShowLicenseDialog(conn astra.Connection, onOK func(), onError func
 	body.AddItem(form, 6, 0, true)
 
 	body.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
+		if opt.HandleGlobalKeys(event) {
 			return nil
 		}
 
 		switch event.Key() {
 		case tcell.KeyEsc:
-			ui.pages.RemovePage(pageDialog)
+			opt.Pages.RemovePage(PageDialog)
 			return nil
 		}
 
@@ -153,27 +154,27 @@ func (ui *UI) ShowLicenseDialog(conn astra.Connection, onOK func(), onError func
 	})
 
 	form.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if ui.HandleGlobalKeys(event) {
+		if opt.HandleGlobalKeys(event) {
 			return nil
 		}
 
 		switch event.Key() {
 		case tcell.KeyEsc:
-			ui.pages.RemovePage(pageDialog)
+			opt.Pages.RemovePage(PageDialog)
 			return nil
 		}
 
 		return event
 	})
 
-	ui.pages.AddPage(pageDialog, centerPrimitive(body, 76, 11), true, true)
-	ui.app.SetFocus(form)
+	opt.Pages.AddPage(PageDialog, centerPrimitive(body, 76, 11), true, true)
+	opt.App.SetFocus(form)
 
 	go func() {
 		client := astra.NewClient(conn)
 		status, err := dashboardLoadAstraStatus(context.Background(), client)
 
-		ui.app.QueueUpdateDraw(func() {
+		opt.App.QueueUpdateDraw(func() {
 			if err != nil {
 				emailView.SetText(fmt.Sprintf(
 					"[red]Email: %s[-]",
@@ -204,4 +205,12 @@ func (ui *UI) ShowLicenseDialog(conn astra.Connection, onOK func(), onError func
 			))
 		})
 	}()
+}
+
+func formatUnixTime(ts int64) string {
+	if ts <= 0 {
+		return "unknown"
+	}
+
+	return time.Unix(ts, 0).Format("02.01.2006 15:04:05")
 }

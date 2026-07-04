@@ -1,4 +1,4 @@
-package main
+package dashboard
 
 import (
 	"main/internal/astra"
@@ -101,7 +101,7 @@ func dashboardRenderStreams(
 
 		color := tcell.ColorGreen
 		if dimmed {
-			color = dashboardDisabledColor
+			color = disabledColor
 		}
 
 		nameCell := table.GetCell(row, 0)

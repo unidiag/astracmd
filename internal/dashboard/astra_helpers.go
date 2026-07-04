@@ -1,15 +1,33 @@
-package main
+package dashboard
 
 import (
 	"fmt"
 	"main/internal/astra"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
+
+var logDVBInputRe = regexp.MustCompile(`^dvb_input\s+(\d+):\d+$`)
+
+func isAdapterLogItem(item astra.AstraLogItem, adapterNumber int) bool {
+	match := logDVBInputRe.FindStringSubmatch(item.Text)
+	if len(match) < 2 {
+		return false
+	}
+
+	n, err := strconv.Atoi(match[1])
+	if err != nil {
+		return false
+	}
+
+	return n == adapterNumber
+}
 
 func FillLogTable(table *tview.Table, items []astra.AstraLogItem, dimmed bool, maxRows int) {
 	table.Clear()
@@ -39,7 +57,7 @@ func FillLogTable(table *tview.Table, items []astra.AstraLogItem, dimmed bool, m
 		case 2:
 			itemColor = tcell.ColorRed
 		case 3:
-			itemColor = dashboardDisabledColor
+			itemColor = disabledColor
 		}
 
 		if dimmed {
@@ -78,11 +96,11 @@ func FillStreamsTable(
 		color := tcell.ColorWhite
 
 		if !stream.Enable {
-			color = dashboardDisabledColor
+			color = disabledColor
 		}
 
 		if dimmed {
-			color = dashboardDisabledColor
+			color = disabledColor
 		}
 
 		nameText := fmt.Sprintf("%d. %s", row+1, stream.DisplayName())
@@ -99,7 +117,7 @@ func FillStreamsTable(
 		errorColor := tcell.ColorYellow
 
 		bitrateText := "-"
-		bitrateColor := dashboardDisabledColor
+		bitrateColor := disabledColor
 
 		if ok {
 			if state.CCError > 0 && state.PESError > 0 {
@@ -218,10 +236,10 @@ func FillAdaptersTable(
 		row := 2 + i*2
 
 		color := tcell.ColorWhite
-		infoColor := dashboardDisabledColor
+		infoColor := disabledColor
 
 		if !adapter.Enable {
-			color = dashboardDisabledColor
+			color = disabledColor
 			infoColor = tcell.ColorDarkGray
 		}
 
@@ -260,12 +278,12 @@ func FillAdaptersTable(
 			}
 
 			if state.Bitrate <= 0 {
-				infoColor = dashboardDisabledColor
+				infoColor = disabledColor
 			}
 		}
 
 		if dimmed {
-			infoColor = dashboardDisabledColor
+			infoColor = disabledColor
 		}
 
 		table.SetCell(row+1, 0,
@@ -275,4 +293,76 @@ func FillAdaptersTable(
 				SetExpansion(1),
 		)
 	}
+}
+
+var logChannelNameRe = regexp.MustCompile(`\[([^\]]+)\]`)
+var logInputSuffixRe = regexp.MustCompile(`\s+[io]/\d+$`)
+
+func normalizeLogChannelName(value string) string {
+	return strings.TrimSpace(value)
+}
+
+func logItemMatchesStreamName(text string, streamName string) bool {
+	streamName = normalizeLogChannelName(streamName)
+	if streamName == "" {
+		return false
+	}
+
+	if strings.Contains(text, "["+streamName+"]") {
+		return true
+	}
+
+	if strings.Contains(text, "["+streamName+" i/") {
+		return true
+	}
+
+	if strings.Contains(text, "["+streamName+" o/") {
+		return true
+	}
+
+	return false
+}
+
+func logItemMatchesStream(text string, stream astra.Stream) bool {
+	return logItemMatchesStreamName(text, stream.DisplayName())
+}
+
+func FilterLogItemsByStreams(items []astra.AstraLogItem, streams []astra.Stream) []astra.AstraLogItem {
+	if len(streams) == 0 {
+		return nil
+	}
+
+	result := make([]astra.AstraLogItem, 0)
+
+	for _, item := range items {
+		for _, stream := range streams {
+			if logItemMatchesStream(item.Text, stream) {
+				result = append(result, item)
+				break
+			}
+		}
+	}
+
+	return result
+}
+
+func FilterLogItemsByStream(items []astra.AstraLogItem, stream astra.Stream) []astra.AstraLogItem {
+	result := make([]astra.AstraLogItem, 0)
+
+	for _, item := range items {
+		if logItemMatchesStream(item.Text, stream) {
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
+func extractLogBracketValue(text string) string {
+	match := logChannelNameRe.FindStringSubmatch(text)
+	if len(match) < 2 {
+		return ""
+	}
+
+	return strings.TrimSpace(match[1])
 }
