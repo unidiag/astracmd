@@ -258,14 +258,14 @@ func FillAdaptersTable(
 
 		state, ok := states[adapter.ID]
 
-		infoText := "   BER:- UNC:- S:- Q:- - Mbps"
+		infoText := "   S:- Q:- BER:- UNC:- - Mbps"
 		if ok {
 			infoText = fmt.Sprintf(
-				"   BER:%s UNC:%s S:%d%% Q:%d%% %.1f Mbps",
-				astra.FormatAdapterCounter(state.BER),
-				astra.FormatAdapterCounter(state.UNC),
+				"   S:%d%% Q:%d%% BER:%s UNC:%s %.1f Mbps",
 				astra.NormalizeAdapterSignal(state.Signal),
 				astra.NormalizeAdapterSignal(state.SNR),
+				astra.FormatAdapterCounter(state.BER),
+				astra.FormatAdapterCounter(state.UNC),
 				float64(state.Bitrate)/1000.0,
 			)
 

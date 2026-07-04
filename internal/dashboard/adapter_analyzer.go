@@ -51,7 +51,7 @@ func ShowAdapterAnalyzerDialog(
 	bars := newAdapterAnalyzerBarsView()
 
 	diseqcInput := tview.NewInputField()
-	diseqcInput.SetLabel("DiSEqC ")
+	diseqcInput.SetLabel("DiSEqC command ")
 	diseqcInput.SetLabelColor(tcell.ColorGray)
 	//diseqcInput.SetTextColor(tcell.ColorWhite)
 	diseqcInput.SetFieldTextColor(tcell.ColorBlack)
@@ -90,7 +90,7 @@ func ShowAdapterAnalyzerDialog(
 	body.AddItem(bars, 8, 0, false)
 
 	body.AddItem(tview.NewBox(), 1, 0, false)
-	body.AddItem(diseqcRow, 1, 0, true)
+	body.AddItem(diseqcRow, 1, 0, false)
 	body.AddItem(tview.NewBox(), 1, 0, false)
 
 	body.AddItem(footer, 1, 0, false)
