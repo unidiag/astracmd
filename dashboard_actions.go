@@ -9,7 +9,7 @@ import (
 
 func dashboardRestartAstra(
 	ctx context.Context,
-	client *astra.AstraClient,
+	client *astra.Client,
 ) error {
 	result := client.Restart(ctx)
 	if result.OK {
@@ -25,8 +25,8 @@ func dashboardRestartAstra(
 
 func dashboardRestartStream(
 	ctx context.Context,
-	client *astra.AstraClient,
-	stream astra.AstraStream,
+	client *astra.Client,
+	stream astra.Stream,
 ) error {
 	streamID := strings.TrimSpace(stream.ID)
 	if streamID == "" {
@@ -47,8 +47,8 @@ func dashboardRestartStream(
 
 func dashboardDeleteStream(
 	ctx context.Context,
-	client *astra.AstraClient,
-	stream astra.AstraStream,
+	client *astra.Client,
+	stream astra.Stream,
 ) error {
 	streamID := strings.TrimSpace(stream.ID)
 	if streamID == "" {
@@ -69,40 +69,40 @@ func dashboardDeleteStream(
 
 func dashboardReloadConfig(
 	ctx context.Context,
-	client *astra.AstraClient,
-) (astra.AstraConfig, error) {
+	client *astra.Client,
+) (astra.Config, error) {
 	result := client.Load(ctx)
 	if result.Online {
 		return result.Config, nil
 	}
 
 	if result.Err != nil {
-		return astra.AstraConfig{}, result.Err
+		return astra.Config{}, result.Err
 	}
 
-	return astra.AstraConfig{}, fmt.Errorf("astra config load failed")
+	return astra.Config{}, fmt.Errorf("astra config load failed")
 }
 
 func dashboardLoadAstraStatus(
 	ctx context.Context,
-	client *astra.AstraClient,
-) (astra.AstraStatus, error) {
+	client *astra.Client,
+) (astra.Status, error) {
 	result := client.GetStatus(ctx)
 	if result.OK {
 		return result.Status, nil
 	}
 
 	if result.Err != nil {
-		return astra.AstraStatus{}, result.Err
+		return astra.Status{}, result.Err
 	}
 
-	return astra.AstraStatus{}, fmt.Errorf("astra status load failed")
+	return astra.Status{}, fmt.Errorf("astra status load failed")
 }
 
 func dashboardRestartAdapter(
 	ctx context.Context,
-	client *astra.AstraClient,
-	adapter astra.AstraAdapter,
+	client *astra.Client,
+	adapter astra.Adapter,
 ) error {
 	adapterID := strings.TrimSpace(adapter.ID)
 	if adapterID == "" {
@@ -123,8 +123,8 @@ func dashboardRestartAdapter(
 
 func dashboardDeleteAdapter(
 	ctx context.Context,
-	client *astra.AstraClient,
-	adapter astra.AstraAdapter,
+	client *astra.Client,
+	adapter astra.Adapter,
 ) error {
 	adapterID := strings.TrimSpace(adapter.ID)
 	if adapterID == "" {

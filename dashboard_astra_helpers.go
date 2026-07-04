@@ -64,8 +64,8 @@ func FillLogTable(table *tview.Table, items []astra.AstraLogItem, dimmed bool, m
 
 func FillStreamsTable(
 	table *tview.Table,
-	streams []astra.AstraStream,
-	states map[string]astra.AstraStreamState,
+	streams []astra.Stream,
+	states map[string]astra.StreamState,
 	dimmed bool,
 ) {
 	table.Clear()
@@ -146,7 +146,7 @@ func FillStreamsTable(
 
 func FilterLogItemsByAdapter(
 	items []astra.AstraLogItem,
-	streams []astra.AstraStream,
+	streams []astra.Stream,
 	adapterNumber int,
 ) []astra.AstraLogItem {
 	result := make([]astra.AstraLogItem, 0)
@@ -181,8 +181,8 @@ func NewDashboardTable(title string) *tview.Table {
 
 func FillAdaptersTable(
 	table *tview.Table,
-	adapters []astra.AstraAdapter,
-	states map[string]astra.AstraAdapterState,
+	adapters []astra.Adapter,
+	states map[string]astra.AdapterState,
 	dimmed bool,
 ) {
 	table.Clear()

@@ -168,12 +168,12 @@ func (ui *UI) ShowConnections() {
 	ui.app.SetFocus(table)
 }
 
-func (ui *UI) ShowConnectionForm(editConn *astra.AstraConnection) {
+func (ui *UI) ShowConnectionForm(editConn *astra.Connection) {
 	ui.pages.RemovePage(pageDialog)
 
 	isEdit := editConn != nil
 
-	conn := astra.AstraConnection{
+	conn := astra.Connection{
 		Login:     "admin",
 		Interface: "127.0.0.1",
 		Port:      8000,
@@ -273,7 +273,7 @@ func onlyPortInput(text string, _ rune) bool {
 	return port >= 0 && port <= 65535
 }
 
-func validateConnection(conn astra.AstraConnection) error {
+func validateConnection(conn astra.Connection) error {
 	if strings.TrimSpace(conn.Name) == "" {
 		return fmt.Errorf("connection name is required")
 	}
@@ -293,7 +293,7 @@ func validateConnection(conn astra.AstraConnection) error {
 	return nil
 }
 
-func (ui *UI) ConfirmDelete(conn astra.AstraConnection) {
+func (ui *UI) ConfirmDelete(conn astra.Connection) {
 	modal := tview.NewModal()
 	modal.SetText(fmt.Sprintf("Delete connection?\n\n%s\n%s", conn.Name, conn.DisplayMaskedDSN()))
 	modal.AddButtons([]string{"Delete", "Cancel"})

@@ -13,19 +13,19 @@ import (
 )
 
 func (ui *UI) ShowAdapterDialog(
-	conn astra.AstraConnection,
-	editAdapter *astra.AstraAdapter,
-	existingAdapters []astra.AstraAdapter,
-	existingStreams []astra.AstraStream,
-	onOK func(astra.AstraAdapter),
-	onScanOK func(astra.AstraAdapter, int),
+	conn astra.Connection,
+	editAdapter *astra.Adapter,
+	existingAdapters []astra.Adapter,
+	existingStreams []astra.Stream,
+	onOK func(astra.Adapter),
+	onScanOK func(astra.Adapter, int),
 	onError func(error),
 ) {
 	ui.pages.RemovePage(pageDialog)
 
 	isEdit := editAdapter != nil
 
-	adapter := astra.AstraAdapter{
+	adapter := astra.Adapter{
 		ID:      dashboardGenerateAdapterID(existingAdapters),
 		Name:    "",
 		Type:    "S2",
@@ -464,7 +464,7 @@ func (ui *UI) ShowAdapterDialog(
 	setFocusByIndex(0)
 }
 
-func dashboardAdapterTransponderText(adapter astra.AstraAdapter) string {
+func dashboardAdapterTransponderText(adapter astra.Adapter) string {
 	tpType := strings.ToUpper(strings.TrimSpace(adapter.Type))
 	frequency := strings.TrimSpace(adapter.Frequency)
 	polarization := strings.ToUpper(strings.TrimSpace(adapter.Polarization))
@@ -491,7 +491,7 @@ func dashboardAdapterTransponderText(adapter astra.AstraAdapter) string {
 	}
 }
 
-func dashboardAdapterLNBText(adapter astra.AstraAdapter) string {
+func dashboardAdapterLNBText(adapter astra.Adapter) string {
 	lof1 := strings.TrimSpace(adapter.Lof1)
 	lof2 := strings.TrimSpace(adapter.Lof2)
 	slof := strings.TrimSpace(adapter.Slof)
@@ -504,35 +504,35 @@ func dashboardAdapterLNBText(adapter astra.AstraAdapter) string {
 }
 
 func dashboardBuildAdapterFromForm(
-	base astra.AstraAdapter,
+	base astra.Adapter,
 	enable bool,
 	name string,
 	adapterNumber string,
 	transponder string,
 	lnb string,
 	mode string,
-) (astra.AstraAdapter, error) {
+) (astra.Adapter, error) {
 	base.Enable = enable
 	base.Name = strings.TrimSpace(name)
 
 	if base.Name == "" {
-		return astra.AstraAdapter{}, fmt.Errorf("adapter name is required")
+		return astra.Adapter{}, fmt.Errorf("adapter name is required")
 	}
 
 	n, err := strconv.Atoi(strings.TrimSpace(adapterNumber))
 	if err != nil {
-		return astra.AstraAdapter{}, fmt.Errorf("adapter number must be integer")
+		return astra.Adapter{}, fmt.Errorf("adapter number must be integer")
 	}
 
 	if n < 0 {
-		return astra.AstraAdapter{}, fmt.Errorf("adapter number must be >= 0")
+		return astra.Adapter{}, fmt.Errorf("adapter number must be >= 0")
 	}
 
 	base.Adapter = n
 
 	tpType, frequency, polarization, symbolrate, err := dashboardParseAdapterTransponder(transponder)
 	if err != nil {
-		return astra.AstraAdapter{}, err
+		return astra.Adapter{}, err
 	}
 
 	base.Type = tpType
@@ -542,7 +542,7 @@ func dashboardBuildAdapterFromForm(
 
 	lof1, lof2, slof, err := dashboardParseAdapterLNB(tpType, lnb)
 	if err != nil {
-		return astra.AstraAdapter{}, err
+		return astra.Adapter{}, err
 	}
 
 	base.Lof1 = lof1
@@ -555,7 +555,7 @@ func dashboardBuildAdapterFromForm(
 
 	modulation, err := dashboardParseAdapterModulation(mode)
 	if err != nil {
-		return astra.AstraAdapter{}, err
+		return astra.Adapter{}, err
 	}
 
 	base.Modulation = modulation
@@ -709,7 +709,7 @@ func dashboardOnlyIntegerInput(text string, _ rune) bool {
 	return err == nil
 }
 
-func dashboardGenerateAdapterID(adapters []astra.AstraAdapter) string {
+func dashboardGenerateAdapterID(adapters []astra.Adapter) string {
 	used := make(map[string]bool)
 
 	for _, adapter := range adapters {

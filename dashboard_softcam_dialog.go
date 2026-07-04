@@ -12,7 +12,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-func dashboardGenerateSoftcamID(existing []astra.AstraSoftcam) string {
+func dashboardGenerateSoftcamID(existing []astra.Softcam) string {
 	used := make(map[string]bool)
 
 	for _, cam := range existing {
@@ -66,8 +66,8 @@ func dashboardIsSoftcamKeyValid(value string) bool {
 }
 
 func (ui *UI) ShowSoftCAMDialog(
-	conn astra.AstraConnection,
-	config astra.AstraConfig,
+	conn astra.Connection,
+	config astra.Config,
 	onSaved func(),
 	onClose func(),
 ) {
@@ -77,7 +77,7 @@ func (ui *UI) ShowSoftCAMDialog(
 	isNewCam := true
 	softcams := config.Softcams
 
-	cam := astra.AstraSoftcam{
+	cam := astra.Softcam{
 		ID:   dashboardGenerateSoftcamID(softcams),
 		Name: "",
 		Type: "newcamd",
@@ -223,7 +223,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			remove = value
 		})
 
-	loadCamToFields := func(item astra.AstraSoftcam, newCam bool) {
+	loadCamToFields := func(item astra.Softcam, newCam bool) {
 		isUpdating = true
 		defer func() {
 			isUpdating = false
@@ -260,7 +260,7 @@ func (ui *UI) ShowSoftCAMDialog(
 
 		sourceIndex := optionIndexes[index]
 		if sourceIndex < 0 {
-			loadCamToFields(astra.AstraSoftcam{
+			loadCamToFields(astra.Softcam{
 				ID:   dashboardGenerateSoftcamID(softcams),
 				Name: "",
 				Type: "newcamd",
@@ -369,7 +369,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			return
 		}
 
-		savedCam := astra.AstraSoftcam{
+		savedCam := astra.Softcam{
 			ID:         currentID,
 			Name:       strings.TrimSpace(name),
 			Type:       currentType,
@@ -522,7 +522,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			return
 		}
 
-		testCam := astra.AstraSoftcam{
+		testCam := astra.Softcam{
 			ID:         currentID,
 			Name:       strings.TrimSpace(name),
 			Type:       currentType,
@@ -615,7 +615,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		}
 		newName += " [CLONE]"
 
-		clonedCam := astra.AstraSoftcam{
+		clonedCam := astra.Softcam{
 			ID:         newID,
 			Name:       newName,
 			Type:       strings.TrimSpace(cam.Type),

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type AstraConnection struct {
+type Connection struct {
 	ID        string
 	Name      string
 	Login     string
@@ -15,19 +15,19 @@ type AstraConnection struct {
 	Debug     bool
 }
 
-func (c AstraConnection) Addr() string {
+func (c Connection) Addr() string {
 	return fmt.Sprintf("%s:%d", c.Interface, c.Port)
 }
 
-func (c AstraConnection) DSN() string {
+func (c Connection) DSN() string {
 	return fmt.Sprintf("%s:%s@%s:%d", c.Login, c.Password, c.Interface, c.Port)
 }
 
-func (c AstraConnection) DisplayDSN() string {
+func (c Connection) DisplayDSN() string {
 	return "<" + c.DSN() + ">"
 }
 
-func (c AstraConnection) MaskedDSN() string {
+func (c Connection) MaskedDSN() string {
 	return fmt.Sprintf(
 		"%s:%s@%s:%d",
 		c.Login,
@@ -37,7 +37,7 @@ func (c AstraConnection) MaskedDSN() string {
 	)
 }
 
-func (c AstraConnection) DisplayMaskedDSN() string {
+func (c Connection) DisplayMaskedDSN() string {
 	return "<" + c.MaskedDSN() + ">"
 }
 

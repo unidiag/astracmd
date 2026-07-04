@@ -13,10 +13,10 @@ import (
 )
 
 func (ui *UI) ShowAdapterAnalyzerDialog(
-	conn astra.AstraConnection,
-	adapter astra.AstraAdapter,
-	existingStreams []astra.AstraStream,
-	onScanOK func(astra.AstraAdapter, int),
+	conn astra.Connection,
+	adapter astra.Adapter,
+	existingStreams []astra.Stream,
+	onScanOK func(astra.Adapter, int),
 	onError func(error),
 ) {
 	adapterID := strings.TrimSpace(adapter.ID)
@@ -25,7 +25,7 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 		return
 	}
 
-	knownStreams := append([]astra.AstraStream(nil), existingStreams...)
+	knownStreams := append([]astra.Stream(nil), existingStreams...)
 	scanInProgress := false
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -168,8 +168,8 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 
 func (ui *UI) runAdapterAnalyzer(
 	ctx context.Context,
-	conn astra.AstraConnection,
-	adapter astra.AstraAdapter,
+	conn astra.Connection,
+	adapter astra.Adapter,
 	status *tview.TextView,
 	table *tview.Table,
 	statusFlags *tview.TextView,
@@ -222,7 +222,7 @@ func (ui *UI) runAdapterAnalyzer(
 			continue
 		}
 
-		state := astra.AstraAdapterState{
+		state := astra.AdapterState{
 			Signal:   event.Signal,
 			SignalDB: event.SignalDB,
 			Bitrate:  event.Bitrate,
@@ -242,7 +242,7 @@ func (ui *UI) runAdapterAnalyzer(
 	}
 }
 
-func formatAdapterAnalyzerStatus(adapterID string, state astra.AstraAdapterState) string {
+func formatAdapterAnalyzerStatus(adapterID string, state astra.AdapterState) string {
 	statusColor := "green"
 	if state.Bitrate <= 0 || state.Signal <= 0 || state.SNR <= 0 {
 		statusColor = "red"
@@ -285,7 +285,7 @@ func setAdapterAnalyzerError(table *tview.Table, err error) {
 		SetExpansion(1))
 }
 
-func setAdapterAnalyzerTable(table *tview.Table, state astra.AstraAdapterState) {
+func setAdapterAnalyzerTable(table *tview.Table, state astra.AdapterState) {
 	table.Clear()
 
 	rows := []struct {
@@ -363,7 +363,7 @@ func formatAdapterAnalyzerDB(value int) string {
 
 type adapterAnalyzerBarsView struct {
 	*tview.Box
-	state astra.AstraAdapterState
+	state astra.AdapterState
 }
 
 func newAdapterAnalyzerBarsView() *adapterAnalyzerBarsView {
@@ -372,7 +372,7 @@ func newAdapterAnalyzerBarsView() *adapterAnalyzerBarsView {
 	}
 }
 
-func (v *adapterAnalyzerBarsView) SetState(state astra.AstraAdapterState) {
+func (v *adapterAnalyzerBarsView) SetState(state astra.AdapterState) {
 	v.state = state
 }
 

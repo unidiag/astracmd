@@ -64,12 +64,12 @@ type AstraWSSysInfoEvent struct {
 	CPUTotalUsage int    `json:"cpu_total_usage"`
 }
 
-func AstraConnectWebSocket(ctx context.Context, conn AstraConnection) (*AstraWSClient, error) {
+func AstraConnectWebSocket(ctx context.Context, conn Connection) (*AstraWSClient, error) {
 	client, _, err := AstraConnectWebSocketWithID(ctx, conn)
 	return client, err
 }
 
-func AstraConnectWebSocketWithID(ctx context.Context, conn AstraConnection) (*AstraWSClient, int64, error) {
+func AstraConnectWebSocketWithID(ctx context.Context, conn Connection) (*AstraWSClient, int64, error) {
 	wsURL := url.URL{
 		Scheme: "ws",
 		Host:   conn.Addr(),

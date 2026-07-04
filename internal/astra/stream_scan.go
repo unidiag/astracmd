@@ -104,7 +104,7 @@ type AstraStreamScanPSIEvent struct {
 	Data  AstraStreamScanPSIData `json:"data"`
 }
 
-func AstraStreamScanInit(ctx context.Context, conn AstraConnection, streamID string, wsID int64) AstraStreamScanInitResult {
+func AstraStreamScanInit(ctx context.Context, conn Connection, streamID string, wsID int64) AstraStreamScanInitResult {
 	streamID = strings.TrimSpace(streamID)
 	if streamID == "" {
 		return AstraStreamScanInitResult{

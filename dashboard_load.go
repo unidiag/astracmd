@@ -8,7 +8,7 @@ import (
 
 func dashboardLoadLogAsync(
 	ctx context.Context,
-	conn astra.AstraConnection,
+	conn astra.Connection,
 	queueUpdate func(func()),
 	onLoaded func([]astra.AstraLogItem),
 	onError func(error),
@@ -37,7 +37,7 @@ func dashboardLoadLogAsync(
 
 func dashboardSetDebugLogAsync(
 	ctx context.Context,
-	conn astra.AstraConnection,
+	conn astra.Connection,
 	enabled bool,
 	queueUpdate func(func()),
 	onSaved func(bool),

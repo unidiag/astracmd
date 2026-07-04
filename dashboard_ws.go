@@ -10,13 +10,13 @@ import (
 
 type DashboardWebSocketHandlers struct {
 	OnLogItems     func(items []astra.AstraLogItem)
-	OnAdapterState func(adapterID string, state astra.AstraAdapterState)
-	OnStreamState  func(streamID string, state astra.AstraStreamState)
+	OnAdapterState func(adapterID string, state astra.AdapterState)
+	OnStreamState  func(streamID string, state astra.StreamState)
 }
 
 func dashboardStartAstraWebSocket(
 	ctx context.Context,
-	conn astra.AstraConnection,
+	conn astra.Connection,
 	queueUpdate func(func()),
 	handlers DashboardWebSocketHandlers,
 ) {
@@ -152,7 +152,7 @@ func dashboardHandleWebSocketAdapterEvent(
 		return
 	}
 
-	state := astra.AstraAdapterState{
+	state := astra.AdapterState{
 		Signal:   event.Signal,
 		SignalDB: event.SignalDB,
 		Bitrate:  event.Bitrate,
@@ -187,7 +187,7 @@ func dashboardHandleWebSocketStreamEvent(
 		return
 	}
 
-	state := astra.AstraStreamState{
+	state := astra.StreamState{
 		Bitrate:   event.Bitrate,
 		Onair:     event.Onair,
 		CCError:   event.CCError,

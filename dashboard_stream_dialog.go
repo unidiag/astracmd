@@ -21,11 +21,11 @@ var dHu = string([]rune{
 const defaultStreamRemap = "set_pnr=100&video=101&audio=102&filter~=101,102"
 
 func (ui *UI) ShowStreamDialog(
-	conn astra.AstraConnection,
-	editStream *astra.AstraStream,
-	existingStreams []astra.AstraStream,
-	softcams []astra.AstraSoftcam,
-	onOK func(astra.AstraStream),
+	conn astra.Connection,
+	editStream *astra.Stream,
+	existingStreams []astra.Stream,
+	softcams []astra.Softcam,
+	onOK func(astra.Stream),
 	onCancel func(),
 	onError func(error),
 ) {
@@ -33,7 +33,7 @@ func (ui *UI) ShowStreamDialog(
 
 	isEdit := editStream != nil
 
-	stream := astra.AstraStream{
+	stream := astra.Stream{
 		ID:       astra.GenerateStreamID(existingStreams),
 		Name:     "",
 		Type:     "spts",
@@ -537,7 +537,7 @@ func dashboardStreamDialogHeight(contentRows int) int {
 	return height
 }
 
-func dashboardStreamRemapText(stream astra.AstraStream) string {
+func dashboardStreamRemapText(stream astra.Stream) string {
 	parts := make([]string, 0, 4)
 
 	if strings.TrimSpace(stream.SetPNR) != "" {
@@ -559,7 +559,7 @@ func dashboardStreamRemapText(stream astra.AstraStream) string {
 	return strings.Join(parts, "&")
 }
 
-func dashboardApplyStreamRemap(stream *astra.AstraStream, value string) error {
+func dashboardApplyStreamRemap(stream *astra.Stream, value string) error {
 	stream.SetPNR = ""
 	stream.SetTSID = ""
 	stream.Map = ""
@@ -604,7 +604,7 @@ func dashboardApplyStreamRemap(stream *astra.AstraStream, value string) error {
 }
 
 func dashboardBuildStreamFromForm(
-	base astra.AstraStream,
+	base astra.Stream,
 	enable bool,
 	name string,
 	hbbtvURL string,
@@ -612,7 +612,7 @@ func dashboardBuildStreamFromForm(
 	inputValues []string,
 	outputValues []string,
 	serviceProvider string,
-) (astra.AstraStream, error) {
+) (astra.Stream, error) {
 	base.Enable = enable
 	base.Name = strings.TrimSpace(name)
 	base.Type = "spts"
@@ -626,17 +626,17 @@ func dashboardBuildStreamFromForm(
 	base.ServiceProvider = serviceProvider
 
 	if base.Name == "" {
-		return astra.AstraStream{}, fmt.Errorf("stream name is required")
+		return astra.Stream{}, fmt.Errorf("stream name is required")
 	}
 
 	inputs := dashboardCleanStringList(inputValues)
 	if len(inputs) == 0 {
-		return astra.AstraStream{}, fmt.Errorf("at least one input is required")
+		return astra.Stream{}, fmt.Errorf("at least one input is required")
 	}
 
 	outputs := dashboardCleanStringList(outputValues)
 	if len(outputs) == 0 {
-		return astra.AstraStream{}, fmt.Errorf("at least one output is required")
+		return astra.Stream{}, fmt.Errorf("at least one output is required")
 	}
 
 	base.Input = inputs
@@ -647,7 +647,7 @@ func dashboardBuildStreamFromForm(
 	}
 
 	if err := dashboardApplyStreamRemap(&base, remap); err != nil {
-		return astra.AstraStream{}, err
+		return astra.Stream{}, err
 	}
 
 	base.ServiceName = astra.StreamServiceName(base.Name)

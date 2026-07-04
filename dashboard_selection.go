@@ -35,7 +35,7 @@ func dashboardAdapterRowFromLogicalIndex(logicalIndex int) int {
 
 func dashboardMoveAdapterSelection(
 	adaptersTable *tview.Table,
-	adapters []astra.AstraAdapter,
+	adapters []astra.Adapter,
 	delta int,
 ) {
 	row, _ := adaptersTable.GetSelection()
@@ -59,7 +59,7 @@ func dashboardMoveAdapterSelection(
 
 func dashboardNormalizeAdapterSelectionRow(
 	adaptersTable *tview.Table,
-	adapters []astra.AstraAdapter,
+	adapters []astra.Adapter,
 	row int,
 ) bool {
 	maxRow := len(adapters)*2 + 1

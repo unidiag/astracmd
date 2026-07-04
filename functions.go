@@ -206,11 +206,11 @@ func logItemMatchesStreamName(text string, streamName string) bool {
 	return false
 }
 
-func logItemMatchesStream(text string, stream astra.AstraStream) bool {
+func logItemMatchesStream(text string, stream astra.Stream) bool {
 	return logItemMatchesStreamName(text, stream.DisplayName())
 }
 
-func FilterLogItemsByStreams(items []astra.AstraLogItem, streams []astra.AstraStream) []astra.AstraLogItem {
+func FilterLogItemsByStreams(items []astra.AstraLogItem, streams []astra.Stream) []astra.AstraLogItem {
 	if len(streams) == 0 {
 		return nil
 	}
@@ -229,7 +229,7 @@ func FilterLogItemsByStreams(items []astra.AstraLogItem, streams []astra.AstraSt
 	return result
 }
 
-func FilterLogItemsByStream(items []astra.AstraLogItem, stream astra.AstraStream) []astra.AstraLogItem {
+func FilterLogItemsByStream(items []astra.AstraLogItem, stream astra.Stream) []astra.AstraLogItem {
 	result := make([]astra.AstraLogItem, 0)
 
 	for _, item := range items {

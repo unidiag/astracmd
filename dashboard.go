@@ -11,7 +11,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ShowDashboard(conn astra.AstraConnection) {
+func (ui *UI) ShowDashboard(conn astra.Connection) {
 	ui.StopDashboardTimer()
 	ui.pages.RemovePage(pageDialog)
 
@@ -124,12 +124,12 @@ func (ui *UI) ShowDashboard(conn astra.AstraConnection) {
 					rt.AppendLogItems(items)
 				},
 
-				OnAdapterState: func(adapterID string, state astra.AstraAdapterState) {
+				OnAdapterState: func(adapterID string, state astra.AdapterState) {
 					rt.adapterStates[adapterID] = state
 					rt.RenderAdapters()
 				},
 
-				OnStreamState: func(streamID string, state astra.AstraStreamState) {
+				OnStreamState: func(streamID string, state astra.StreamState) {
 					rt.streamStates[streamID] = state
 					rt.RenderStreams()
 				},
@@ -183,20 +183,20 @@ func (ui *UI) ShowDashboard(conn astra.AstraConnection) {
 	// ██║  ██║██████╔╝██║  ██║██║        ██║   ███████╗██║  ██║    ██████╔╝██║██║  ██║███████╗╚██████╔╝╚██████╔╝
 	// ╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝╚═╝        ╚═╝   ╚══════╝╚═╝  ╚═╝    ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝
 
-	showAdapterDialog := func(editAdapter *astra.AstraAdapter) {
+	showAdapterDialog := func(editAdapter *astra.Adapter) {
 		ui.ShowAdapterDialog(
 			conn,
 			editAdapter,
 			rt.currentConfig.Adapters,
 			rt.currentConfig.Streams,
-			func(saved astra.AstraAdapter) {
+			func(saved astra.Adapter) {
 				rt.versionView.SetText(fmt.Sprintf(
 					"[green]Adapter saved: %s[-]",
 					tview.Escape(saved.DisplayName()),
 				))
 				loadAstraConfig()
 			},
-			func(adapter astra.AstraAdapter, count int) {
+			func(adapter astra.Adapter, count int) {
 				rt.versionView.SetText(fmt.Sprintf(
 					"[green]Scan completed: %d stream(s) added for %s[-]",
 					count,
@@ -231,7 +231,7 @@ func (ui *UI) ShowDashboard(conn astra.AstraConnection) {
 			conn,
 			adapter,
 			rt.currentConfig.Streams,
-			func(adapter astra.AstraAdapter, count int) {
+			func(adapter astra.Adapter, count int) {
 				loadAstraConfig()
 			},
 			func(err error) {
@@ -260,13 +260,13 @@ func (ui *UI) ShowDashboard(conn astra.AstraConnection) {
 	// ███████║   ██║   ██║  ██║███████╗██║  ██║██║ ╚═╝ ██║    ██████╔╝██║██║  ██║███████╗╚██████╔╝╚██████╔╝
 	// ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝    ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝
 
-	showStreamDialog := func(editStream *astra.AstraStream) {
+	showStreamDialog := func(editStream *astra.Stream) {
 		ui.ShowStreamDialog(
 			conn,
 			editStream,
 			rt.currentConfig.Streams,
 			rt.currentConfig.Softcams,
-			func(saved astra.AstraStream) {
+			func(saved astra.Stream) {
 				activePane := rt.activePane
 				rt.versionView.SetText(fmt.Sprintf(
 					"[green]Stream saved: %s[-]",
@@ -456,7 +456,7 @@ func (ui *UI) ShowDashboard(conn astra.AstraConnection) {
 				return
 			}
 
-			streams = []astra.AstraStream{stream}
+			streams = []astra.Stream{stream}
 		}
 
 		if len(streams) == 1 {

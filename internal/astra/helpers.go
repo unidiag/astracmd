@@ -13,7 +13,7 @@ import (
 // ██║██████╔╝
 // ╚═╝╚═════╝
 
-func GenerateStreamID(streams []AstraStream) string {
+func GenerateStreamID(streams []Stream) string {
 	used := make(map[string]bool)
 
 	for _, stream := range streams {

@@ -32,7 +32,7 @@ type AstraLogItem struct {
 	Text string `json:"text"`
 }
 
-func AstraSetLog(ctx context.Context, conn AstraConnection, debug bool) AstraSetLogResult {
+func AstraSetLog(ctx context.Context, conn Connection, debug bool) AstraSetLogResult {
 	payload := struct {
 		Cmd string `json:"cmd"`
 		Set struct {
@@ -74,7 +74,7 @@ func AstraSetLog(ctx context.Context, conn AstraConnection, debug bool) AstraSet
 	return AstraSetLogResult{OK: true}
 }
 
-func AstraLog(ctx context.Context, conn AstraConnection) AstraLogResult {
+func AstraLog(ctx context.Context, conn Connection) AstraLogResult {
 	raw, err := astraControlRequest(ctx, conn, []byte(`{"cmd":"log"}`))
 	if err != nil {
 		return AstraLogResult{OK: false, Err: err}

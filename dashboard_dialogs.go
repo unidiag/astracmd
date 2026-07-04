@@ -10,7 +10,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ConfirmRestartAstra(conn astra.AstraConnection, onOK func(), onError func(error)) {
+func (ui *UI) ConfirmRestartAstra(conn astra.Connection, onOK func(), onError func(error)) {
 	modal := tview.NewModal()
 	modal.SetText("Are you sure restart Astra?")
 	modal.AddButtons([]string{"Restart", "Cancel"})
@@ -24,7 +24,7 @@ func (ui *UI) ConfirmRestartAstra(conn astra.AstraConnection, onOK func(), onErr
 		ui.pages.RemovePage(pageDialog)
 
 		go func() {
-			client := astra.NewAstraClient(conn)
+			client := astra.NewClient(conn)
 			err := dashboardRestartAstra(context.Background(), client)
 
 			ui.app.QueueUpdateDraw(func() {
@@ -60,7 +60,7 @@ func (ui *UI) ConfirmRestartAstra(conn astra.AstraConnection, onOK func(), onErr
 	ui.app.SetFocus(modal)
 }
 
-func (ui *UI) ShowLicenseDialog(conn astra.AstraConnection, onOK func(), onError func(error)) {
+func (ui *UI) ShowLicenseDialog(conn astra.Connection, onOK func(), onError func(error)) {
 	license := ""
 
 	emailView := tview.NewTextView()
@@ -103,7 +103,7 @@ func (ui *UI) ShowLicenseDialog(conn astra.AstraConnection, onOK func(), onError
 		ui.pages.RemovePage(pageDialog)
 
 		go func() {
-			client := astra.NewAstraClient(conn)
+			client := astra.NewClient(conn)
 			result := client.SetLicense(context.Background(), license)
 
 			ui.app.QueueUpdateDraw(func() {
@@ -170,7 +170,7 @@ func (ui *UI) ShowLicenseDialog(conn astra.AstraConnection, onOK func(), onError
 	ui.app.SetFocus(form)
 
 	go func() {
-		client := astra.NewAstraClient(conn)
+		client := astra.NewClient(conn)
 		status, err := dashboardLoadAstraStatus(context.Background(), client)
 
 		ui.app.QueueUpdateDraw(func() {

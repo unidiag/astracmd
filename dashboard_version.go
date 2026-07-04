@@ -17,7 +17,7 @@ type DashboardVersionCallbacks struct {
 
 func dashboardStartVersionWatcher(
 	ctx context.Context,
-	conn astra.AstraConnection,
+	conn astra.Connection,
 	forceOfflineUntil *atomic.Int64,
 	queueUpdate func(func()),
 	interval time.Duration,

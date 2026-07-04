@@ -62,8 +62,8 @@ type astraTestSoftcamResponse struct {
 
 func AstraTestSoftcam(
 	ctx context.Context,
-	conn AstraConnection,
-	softcam AstraSoftcam,
+	conn Connection,
+	softcam Softcam,
 ) AstraTestSoftcamResult {
 	softcamID := strings.TrimSpace(softcam.ID)
 	if softcamID == "" {
@@ -74,8 +74,8 @@ func AstraTestSoftcam(
 	}
 
 	payload := struct {
-		Cmd    string       `json:"cmd"`
-		Config AstraSoftcam `json:"config"`
+		Cmd    string  `json:"cmd"`
+		Config Softcam `json:"config"`
 	}{
 		Cmd:    "test-softcam",
 		Config: softcam,
@@ -128,9 +128,9 @@ func AstraTestSoftcam(
 
 func AstraSaveSoftcam(
 	ctx context.Context,
-	conn AstraConnection,
+	conn Connection,
 	gid int64,
-	softcam AstraSoftcam,
+	softcam Softcam,
 ) AstraSaveSoftcamResult {
 	if gid == 0 {
 		return AstraSaveSoftcamResult{
@@ -184,7 +184,7 @@ func AstraSaveSoftcam(
 
 func AstraRemoveSoftcam(
 	ctx context.Context,
-	conn AstraConnection,
+	conn Connection,
 	gid int64,
 	softcamID string,
 ) AstraSaveSoftcamResult {

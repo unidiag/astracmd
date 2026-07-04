@@ -14,7 +14,7 @@ type AstraScanAddStreamsResult struct {
 	OK      bool
 	ScanID  string
 	Count   int
-	Streams []AstraStream
+	Streams []Stream
 	Err     error
 }
 
@@ -75,9 +75,9 @@ type astraScanAdapterPayload struct {
 
 func AstraScanAddStreams(
 	ctx context.Context,
-	conn AstraConnection,
-	adapter AstraAdapter,
-	existingStreams []AstraStream,
+	conn Connection,
+	adapter Adapter,
+	existingStreams []Stream,
 	checkDelay time.Duration,
 ) AstraScanAddStreamsResult {
 	scanID, err := AstraScanInit(ctx, conn, adapter)
@@ -105,7 +105,7 @@ func AstraScanAddStreams(
 		}
 	}
 
-	addedStreams := make([]AstraStream, 0, len(streams))
+	addedStreams := make([]Stream, 0, len(streams))
 
 	for _, stream := range streams {
 		result := AstraSaveStream(ctx, conn, stream)
@@ -140,7 +140,7 @@ func AstraScanAddStreams(
 	}
 }
 
-func AstraScanInit(ctx context.Context, conn AstraConnection, adapter AstraAdapter) (string, error) {
+func AstraScanInit(ctx context.Context, conn Connection, adapter Adapter) (string, error) {
 	payload := struct {
 		Cmd  string                  `json:"cmd"`
 		Scan astraScanAdapterPayload `json:"scan"`
@@ -192,7 +192,7 @@ func AstraScanInit(ctx context.Context, conn AstraConnection, adapter AstraAdapt
 	return out.ID, nil
 }
 
-func AstraScanCheck(ctx context.Context, conn AstraConnection, scanID string) (astraScanCheckResponse, error) {
+func AstraScanCheck(ctx context.Context, conn Connection, scanID string) (astraScanCheckResponse, error) {
 	payload := struct {
 		Cmd string `json:"cmd"`
 		ID  string `json:"id"`
@@ -228,10 +228,10 @@ func AstraScanCheck(ctx context.Context, conn AstraConnection, scanID string) (a
 }
 
 func BuildStreamsFromScan(
-	adapter AstraAdapter,
-	existingStreams []AstraStream,
+	adapter Adapter,
+	existingStreams []Stream,
 	tables []astraScanTable,
-) []AstraStream {
+) []Stream {
 	serviceNames := make(map[int]string)
 	videoPNRs := make(map[int]bool)
 	existingPNRs := existingStreamPNRsByAdapter(adapter.ID, existingStreams)
@@ -260,8 +260,8 @@ func BuildStreamsFromScan(
 
 	sort.Ints(pnrs)
 
-	streams := make([]AstraStream, 0, len(pnrs))
-	used := make([]AstraStream, 0, len(existingStreams))
+	streams := make([]Stream, 0, len(pnrs))
+	used := make([]Stream, 0, len(existingStreams))
 	used = append(used, existingStreams...)
 
 	for _, pnr := range pnrs {
@@ -276,7 +276,7 @@ func BuildStreamsFromScan(
 
 		streamID := GenerateStreamID(used)
 
-		stream := AstraStream{
+		stream := Stream{
 			ID:     streamID,
 			Name:   fmt.Sprintf("[%d] %s", pnr, strings.TrimLeft(channelName, "_")),
 			Type:   "spts",
@@ -340,7 +340,7 @@ func astraScanHasVideo(streams []astraScanESStream) bool {
 	return false
 }
 
-func existingStreamPNRsByAdapter(adapterID string, streams []AstraStream) map[int]bool {
+func existingStreamPNRsByAdapter(adapterID string, streams []Stream) map[int]bool {
 	result := make(map[int]bool)
 
 	adapterID = strings.TrimSpace(adapterID)

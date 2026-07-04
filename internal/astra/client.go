@@ -2,48 +2,48 @@ package astra
 
 import "context"
 
-type AstraClient struct {
-	Conn AstraConnection
+type Client struct {
+	Conn Connection
 }
 
-func NewAstraClient(conn AstraConnection) *AstraClient {
-	return &AstraClient{
+func NewClient(conn Connection) *Client {
+	return &Client{
 		Conn: conn,
 	}
 }
 
-func (c *AstraClient) Load(ctx context.Context) AstraLoadResult {
+func (c *Client) Load(ctx context.Context) LoadResult {
 	return AstraLoad(ctx, c.Conn)
 }
 
-func (c *AstraClient) GetStatus(ctx context.Context) AstraStatusResult {
+func (c *Client) GetStatus(ctx context.Context) StatusResult {
 	return AstraGetStatus(ctx, c.Conn)
 }
 
-func (c *AstraClient) Restart(ctx context.Context) AstraRestartResult {
+func (c *Client) Restart(ctx context.Context) RestartResult {
 	return AstraRestart(ctx, c.Conn)
 }
 
-func (c *AstraClient) SetLicense(ctx context.Context, license string) AstraSetLicenseResult {
+func (c *Client) SetLicense(ctx context.Context, license string) SetLicenseResult {
 	return AstraSetLicense(ctx, c.Conn, license)
 }
 
-func (c *AstraClient) RestartStream(ctx context.Context, streamID string) AstraRestartItemResult {
+func (c *Client) RestartStream(ctx context.Context, streamID string) RestartItemResult {
 	return AstraRestartStream(ctx, c.Conn, streamID)
 }
 
-func (c *AstraClient) DeleteStream(ctx context.Context, streamID string) AstraDeleteItemResult {
+func (c *Client) DeleteStream(ctx context.Context, streamID string) DeleteItemResult {
 	return AstraDeleteStream(ctx, c.Conn, streamID)
 }
 
-func (c *AstraClient) RestartAdapter(ctx context.Context, adapterID string) AstraRestartItemResult {
+func (c *Client) RestartAdapter(ctx context.Context, adapterID string) RestartItemResult {
 	return AstraRestartAdapter(ctx, c.Conn, adapterID)
 }
 
-func (c *AstraClient) DeleteAdapter(ctx context.Context, adapterID string) AstraDeleteItemResult {
+func (c *Client) DeleteAdapter(ctx context.Context, adapterID string) DeleteItemResult {
 	return AstraDeleteAdapter(ctx, c.Conn, adapterID)
 }
 
-func (c *AstraClient) ControlRequest(ctx context.Context, body []byte) ([]byte, error) {
+func (c *Client) ControlRequest(ctx context.Context, body []byte) ([]byte, error) {
 	return astraControlRequest(ctx, c.Conn, body)
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ShowStreamAnalyzerDialog(conn astra.AstraConnection, stream astra.AstraStream) {
+func (ui *UI) ShowStreamAnalyzerDialog(conn astra.Connection, stream astra.Stream) {
 	streamID := strings.TrimSpace(stream.ID)
 	if streamID == "" {
 		ui.ShowError("Stream ID is empty", nil)
@@ -75,8 +75,8 @@ func (ui *UI) ShowStreamAnalyzerDialog(conn astra.AstraConnection, stream astra.
 
 func (ui *UI) runStreamAnalyzer(
 	ctx context.Context,
-	conn astra.AstraConnection,
-	stream astra.AstraStream,
+	conn astra.Connection,
+	stream astra.Stream,
 	status *tview.TextView,
 	table *tview.Table,
 ) {

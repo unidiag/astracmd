@@ -9,7 +9,7 @@ import (
 
 var dvbInputRe = regexp.MustCompile(`^dvb://([^#?]+)`)
 
-type AstraStreamState struct {
+type StreamState struct {
 	Bitrate   int
 	Onair     bool
 	CCError   int
@@ -18,7 +18,7 @@ type AstraStreamState struct {
 	InputID   int
 }
 
-type AstraAdapterState struct {
+type AdapterState struct {
 	Signal   int
 	SignalDB int
 	Bitrate  int
@@ -29,14 +29,14 @@ type AstraAdapterState struct {
 	Status   int
 }
 
-type AstraConfig struct {
-	GID      int64          `json:"gid"`
-	Streams  []AstraStream  `json:"make_stream"`
-	Adapters []AstraAdapter `json:"dvb_tune"`
-	Softcams []AstraSoftcam `json:"softcam"`
+type Config struct {
+	GID      int64     `json:"gid"`
+	Streams  []Stream  `json:"make_stream"`
+	Adapters []Adapter `json:"dvb_tune"`
+	Softcams []Softcam `json:"softcam"`
 }
 
-type AstraStream struct {
+type Stream struct {
 	ID     string   `json:"id"`
 	Name   string   `json:"name"`
 	Type   string   `json:"type"`
@@ -57,7 +57,7 @@ type AstraStream struct {
 	ServiceProvider string `json:"service_provider"`
 }
 
-type AstraAdapter struct {
+type Adapter struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Type         string `json:"type"`
@@ -75,7 +75,7 @@ type AstraAdapter struct {
 	Enable       bool   `json:"enable"`
 }
 
-type AstraSoftcam struct {
+type Softcam struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
 	Type       string `json:"type"`
@@ -87,7 +87,7 @@ type AstraSoftcam struct {
 	DisableEMM bool   `json:"disable_emm,omitempty"`
 }
 
-func (c AstraSoftcam) DisplayName() string {
+func (c Softcam) DisplayName() string {
 	name := strings.TrimSpace(c.Name)
 	if name != "" {
 		return name
@@ -101,8 +101,8 @@ func (c AstraSoftcam) DisplayName() string {
 	return "New SoftCAM"
 }
 
-func BuildAdapterStreamMap(cfg AstraConfig) map[string][]AstraStream {
-	result := make(map[string][]AstraStream)
+func BuildAdapterStreamMap(cfg Config) map[string][]Stream {
+	result := make(map[string][]Stream)
 
 	for _, stream := range cfg.Streams {
 		adapterID := stream.FirstAdapterID()
@@ -123,7 +123,7 @@ func BuildAdapterStreamMap(cfg AstraConfig) map[string][]AstraStream {
 	return result
 }
 
-func (s AstraStream) FirstAdapterID() string {
+func (s Stream) FirstAdapterID() string {
 	for _, input := range s.Input {
 		m := dvbInputRe.FindStringSubmatch(input)
 		if len(m) == 2 {
@@ -134,7 +134,7 @@ func (s AstraStream) FirstAdapterID() string {
 	return ""
 }
 
-func (a AstraAdapter) DisplayName() string {
+func (a Adapter) DisplayName() string {
 	name := strings.TrimSpace(a.Name)
 	if name == "" {
 		name = strings.TrimSpace(a.ID)
@@ -148,7 +148,7 @@ func (a AstraAdapter) DisplayName() string {
 	return fmt.Sprintf("%s #%d %s", name, a.Adapter, tp)
 }
 
-func (a AstraAdapter) DisplayTransponder() string {
+func (a Adapter) DisplayTransponder() string {
 	tpType := strings.ToUpper(strings.TrimSpace(a.Type))
 	frequency := strings.TrimSpace(a.Frequency)
 	polarization := strings.ToUpper(strings.TrimSpace(a.Polarization))
@@ -181,7 +181,7 @@ func (a AstraAdapter) DisplayTransponder() string {
 	}
 }
 
-func (s AstraStream) DisplayName() string {
+func (s Stream) DisplayName() string {
 	name := strings.TrimSpace(s.Name)
 	if name == "" {
 		name = s.ID
