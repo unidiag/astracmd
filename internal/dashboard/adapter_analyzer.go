@@ -50,10 +50,30 @@ func ShowAdapterAnalyzerDialog(
 
 	bars := newAdapterAnalyzerBarsView()
 
+	diseqcInput := tview.NewInputField()
+	diseqcInput.SetLabel("DiSEqC ")
+	diseqcInput.SetLabelColor(tcell.ColorGray)
+	//diseqcInput.SetTextColor(tcell.ColorWhite)
+	diseqcInput.SetFieldTextColor(tcell.ColorBlack)
+	diseqcInput.SetFieldBackgroundColor(tcell.ColorGreen)
+	diseqcInput.SetFieldWidth(40)
+	diseqcInput.SetPlaceholder(defaultDiseqcBytes)
+	diseqcInput.SetText(diseqcInputTextFromConfig(adapter.Diseqc))
+
+	sendDiseqcButton := tview.NewButton("SEND")
+
+	diseqcRow := tview.NewFlex()
+	diseqcRow.SetDirection(tview.FlexColumn)
+	diseqcRow.AddItem(tview.NewBox(), 2, 0, false)
+	diseqcRow.AddItem(diseqcInput, 0, 1, true)
+	diseqcRow.AddItem(tview.NewBox(), 1, 0, false)
+	diseqcRow.AddItem(sendDiseqcButton, 8, 0, true)
+	diseqcRow.AddItem(tview.NewBox(), 2, 0, false)
+
 	footer := tview.NewTextView()
 	footer.SetDynamicColors(true)
 	footer.SetTextAlign(tview.AlignCenter)
-	footer.SetText("[gray]Space — scan & add new    Esc — close[-]")
+	footer.SetText("[gray]Space — scan & add new    Tab — DiSEqC    Esc — close[-]")
 
 	body := tview.NewFlex()
 	body.SetDirection(tview.FlexRow)
@@ -68,6 +88,11 @@ func ShowAdapterAnalyzerDialog(
 	body.AddItem(statusFlags, 1, 0, false)
 	body.AddItem(statusFlagsSpacer, 1, 0, false)
 	body.AddItem(bars, 8, 0, false)
+
+	body.AddItem(tview.NewBox(), 1, 0, false)
+	body.AddItem(diseqcRow, 1, 0, true)
+	body.AddItem(tview.NewBox(), 1, 0, false)
+
 	body.AddItem(footer, 1, 0, false)
 
 	closeDialog := func() {
@@ -142,6 +167,68 @@ func ShowAdapterAnalyzerDialog(
 		}()
 	}
 
+	// send diseqc cmd
+	sendDiseqcCommand := func() {
+		rawCommand := strings.TrimSpace(diseqcInput.GetText())
+
+		cmdAdapter := adapter
+		cmdAdapter.Enable = true
+
+		if rawCommand == "" {
+			cmdAdapter.Diseqc = ""
+			cmdAdapter.DiseqcMode = ""
+
+			status.SetText("[yellow]Saving adapter without DiSEqC command...[-]")
+		} else {
+			cmd, err := buildDiseqcCommand(rawCommand, adapter.Polarization)
+			if err != nil {
+				status.SetText("[red]" + err.Error() + "[-]")
+				return
+			}
+
+			cmdAdapter.DiseqcMode = "cmd"
+			cmdAdapter.Diseqc = cmd
+
+			status.SetText("[yellow]Sending DiSEqC command...[-]")
+		}
+
+		go func() {
+			result := astra.AstraSaveAdapter(context.Background(), conn, cmdAdapter)
+
+			opt.App.QueueUpdateDraw(func() {
+				if !result.OK {
+					status.SetText("[red]DiSEqC command failed[-]")
+
+					if onError != nil {
+						onError(result.Err)
+					}
+
+					return
+				}
+
+				if rawCommand == "" {
+					status.SetText("[green]Adapter saved without DiSEqC command[-]")
+				} else {
+					status.SetText("[green]DiSEqC command sent[-]")
+				}
+
+				opt.App.SetFocus(body)
+			})
+		}()
+	}
+
+	sendDiseqcButton.SetSelectedFunc(sendDiseqcCommand)
+
+	diseqcInput.SetDoneFunc(func(key tcell.Key) {
+		switch key {
+		case tcell.KeyEnter:
+			sendDiseqcCommand()
+
+		case tcell.KeyEsc:
+			closeDialog()
+		}
+	})
+
 	body.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if opt.HandleGlobalKeys(event) {
 			return nil
@@ -152,8 +239,24 @@ func ShowAdapterAnalyzerDialog(
 			closeDialog()
 			return nil
 
+		case tcell.KeyTab:
+			switch opt.App.GetFocus() {
+			case diseqcInput:
+				opt.App.SetFocus(sendDiseqcButton)
+			case sendDiseqcButton:
+				opt.App.SetFocus(body)
+			default:
+				opt.App.SetFocus(diseqcInput)
+			}
+
+			return nil
+
 		case tcell.KeyRune:
 			if event.Rune() == ' ' {
+				if opt.App.GetFocus() == diseqcInput {
+					return event
+				}
+
 				runScan()
 				return nil
 			}
@@ -162,7 +265,7 @@ func ShowAdapterAnalyzerDialog(
 		return event
 	})
 
-	opt.Pages.AddPage(PageDialog, centerPrimitive(body, 72, 17), true, true)
+	opt.Pages.AddPage(PageDialog, centerPrimitive(body, 76, 20), true, true)
 	opt.App.SetFocus(body)
 
 	go runAdapterAnalyzer(opt, ctx, conn, adapter, status, table, statusFlags, bars)
@@ -564,4 +667,147 @@ func formatAdapterStatusFlagsColored(status int) string {
 	}
 
 	return strings.Join(parts, " ")
+}
+
+// ██████╗ ██╗███████╗███████╗ ██████╗  ██████╗    ██╗  ██╗███████╗██╗     ██████╗ ███████╗██████╗ ███████╗
+// ██╔══██╗██║██╔════╝██╔════╝██╔═══██╗██╔════╝    ██║  ██║██╔════╝██║     ██╔══██╗██╔════╝██╔══██╗██╔════╝
+// ██║  ██║██║███████╗█████╗  ██║   ██║██║         ███████║█████╗  ██║     ██████╔╝█████╗  ██████╔╝███████╗
+// ██║  ██║██║╚════██║██╔══╝  ██║▄▄ ██║██║         ██╔══██║██╔══╝  ██║     ██╔═══╝ ██╔══╝  ██╔══██╗╚════██║
+// ██████╔╝██║███████║███████╗╚██████╔╝╚██████╗    ██║  ██║███████╗███████╗██║     ███████╗██║  ██║███████║
+// ╚═════╝ ╚═╝╚══════╝╚══════╝ ╚══▀▀═╝  ╚═════╝    ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝
+
+const defaultDiseqcBytes = "E0 31 6E E0 00"
+
+func diseqcInputTextFromConfig(current string) string {
+	current = strings.TrimSpace(current)
+	if current == "" {
+		return ""
+	}
+
+	start := strings.Index(current, "[")
+	stop := strings.Index(current, "]")
+
+	if start >= 0 && stop > start {
+		value := strings.TrimSpace(current[start+1 : stop])
+		if value != "" {
+			return value
+		}
+	}
+
+	return current
+}
+
+func buildDiseqcCommand(input string, polarization string) (string, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return "", nil
+	}
+
+	if looksLikeFullDiseqcCommand(input) {
+		return normalizeFullDiseqcCommand(input)
+	}
+
+	bytesText, err := normalizeDiseqcBytes(input)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := "t W50 [" + bytesText + "]"
+
+	switch strings.ToUpper(strings.TrimSpace(polarization)) {
+	case "V", "R":
+		cmd += " W30 T"
+	}
+
+	return cmd, nil
+}
+
+func looksLikeFullDiseqcCommand(input string) bool {
+	input = strings.TrimSpace(input)
+
+	return strings.Contains(input, "[") && strings.Contains(input, "]")
+}
+
+func normalizeFullDiseqcCommand(input string) (string, error) {
+	input = strings.TrimSpace(input)
+
+	start := strings.Index(input, "[")
+	stop := strings.Index(input, "]")
+
+	if start < 0 || stop <= start {
+		return "", fmt.Errorf("invalid full DiSEqC command")
+	}
+
+	rawBytes := strings.TrimSpace(input[start+1 : stop])
+
+	bytesText, err := normalizeDiseqcBytes(rawBytes)
+	if err != nil {
+		return "", err
+	}
+
+	before := strings.TrimSpace(input[:start])
+	after := strings.TrimSpace(input[stop+1:])
+
+	result := before + " [" + bytesText + "]"
+	if after != "" {
+		result += " " + after
+	}
+
+	return result, nil
+}
+
+func normalizeDiseqcBytes(input string) (string, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		input = defaultDiseqcBytes
+	}
+
+	input = strings.Trim(input, "[]")
+	input = strings.TrimSpace(input)
+	input = strings.ToUpper(input)
+
+	if strings.Contains(input, " ") {
+		parts := strings.Fields(input)
+
+		for _, part := range parts {
+			if len(part) != 2 || !isHexByte(part) {
+				return "", fmt.Errorf("invalid DiSEqC byte: %s", part)
+			}
+		}
+
+		return strings.Join(parts, " "), nil
+	}
+
+	if len(input)%2 != 0 {
+		return "", fmt.Errorf("DiSEqC command must contain even number of hex digits")
+	}
+
+	if !isHexString(input) {
+		return "", fmt.Errorf("DiSEqC command contains non-hex characters")
+	}
+
+	parts := make([]string, 0, len(input)/2)
+	for i := 0; i < len(input); i += 2 {
+		parts = append(parts, input[i:i+2])
+	}
+
+	return strings.Join(parts, " "), nil
+}
+
+func isHexByte(value string) bool {
+	return len(value) == 2 && isHexString(value)
+}
+
+func isHexString(value string) bool {
+	for _, r := range value {
+		switch {
+		case r >= '0' && r <= '9':
+		case r >= 'A' && r <= 'F':
+		case r >= 'a' && r <= 'f':
+		default:
+			return false
+		}
+	}
+
+	return true
 }

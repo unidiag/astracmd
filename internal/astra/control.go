@@ -244,6 +244,8 @@ type astraSetAdapterPayload struct {
 	Bandwidth    string `json:"bandwidth,omitempty"`
 	Hierarchy    string `json:"hierarchy,omitempty"`
 	Modulation   string `json:"modulation,omitempty"`
+	DiseqcMode   string `json:"diseqc_mode,omitempty"`
+	Diseqc       string `json:"diseqc,omitempty"`
 	Lof1         string `json:"lof1,omitempty"`
 	Lof2         string `json:"lof2,omitempty"`
 	Slof         string `json:"slof,omitempty"`
@@ -277,6 +279,8 @@ func AstraSaveAdapter(ctx context.Context, conn Connection, adapter Adapter) Ast
 			Bandwidth:    adapter.Bandwidth,
 			Hierarchy:    adapter.Hierarchy,
 			Modulation:   adapter.Modulation,
+			DiseqcMode:   adapter.DiseqcMode,
+			Diseqc:       adapter.Diseqc,
 			Lof1:         adapter.Lof1,
 			Lof2:         adapter.Lof2,
 			Slof:         adapter.Slof,

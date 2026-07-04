@@ -513,9 +513,11 @@ func dashboardBuildAdapterFromForm(
 	lnb string,
 	mode string,
 ) (astra.Adapter, error) {
+	originalDiseqcMode := base.DiseqcMode
+	originalDiseqc := base.Diseqc
+
 	base.Enable = enable
 	base.Name = strings.TrimSpace(name)
-
 	if base.Name == "" {
 		return astra.Adapter{}, fmt.Errorf("adapter name is required")
 	}
@@ -588,6 +590,14 @@ func dashboardBuildAdapterFromForm(
 		base.Lof1 = ""
 		base.Lof2 = ""
 		base.Slof = ""
+	}
+
+	if base.Type == "S" || base.Type == "S2" {
+		base.DiseqcMode = originalDiseqcMode
+		base.Diseqc = originalDiseqc
+	} else {
+		base.DiseqcMode = ""
+		base.Diseqc = ""
 	}
 
 	return base, nil
