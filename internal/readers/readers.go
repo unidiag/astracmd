@@ -1,29 +1,16 @@
 package readers
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
-
-const serialByIDPath = "/dev/serial/by-id"
-
-type Options struct {
-	App              *tview.Application
-	Pages            *tview.Pages
-	PageName         string
-	HandleGlobalKeys func(*tcell.EventKey) bool
-}
-
-type Device struct {
-	Name   string
-	Path   string
-	Target string
-}
 
 func Show(opt Options) {
 	table := tview.NewTable()
@@ -33,164 +20,391 @@ func Show(opt Options) {
 	table.SetSelectable(true, false)
 	table.SetEvaluateAllRows(true)
 
+	configArea := tview.NewTextArea()
+	configArea.SetBorder(true)
+	configArea.SetTitle(" oscam.conf ")
+	configArea.SetTitleAlign(tview.AlignCenter)
+	configArea.SetPlaceholder("Select busy reader with oscam process")
+
+	logView := tview.NewTextView()
+	logView.SetBorder(true)
+	logView.SetTitle(" Log ")
+	logView.SetTitleAlign(tview.AlignCenter)
+	logView.SetDynamicColors(true)
+	logView.SetWrap(false)
+	logView.SetScrollable(false)
+
 	status := tview.NewTextView()
 	status.SetDynamicColors(true)
 	status.SetTextAlign(tview.AlignCenter)
-	status.SetText("[gray]F5 — reload    Esc — close[-]")
+	status.SetText("[gray]Tab — switch Readers/Config    Ctrl+S — save config    Space — kill process    Esc — close[-]")
+
+	content := tview.NewFlex()
+	content.SetDirection(tview.FlexColumn)
+	content.AddItem(table, 0, 2, true)
+	content.AddItem(configArea, 0, 3, false)
+	content.AddItem(logView, 0, 5, false)
 
 	body := tview.NewFlex()
 	body.SetDirection(tview.FlexRow)
-	body.AddItem(table, 0, 1, true)
+	body.AddItem(content, 0, 1, true)
 	body.AddItem(status, 1, 0, false)
 
+	var (
+		currentDevices []Device
+		currentState   selectedReaderState
+		activePane     = readersPaneList
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
 	closeDialog := func() {
+		cancel()
 		opt.Pages.RemovePage(opt.PageName)
 	}
 
-	load := func() {
+	setStatus := func(text string) {
+		status.SetText(text)
+	}
+
+	updateBorders := func() {
+		table.SetBorderColor(tcell.ColorWhite)
+		configArea.SetBorderColor(tcell.ColorWhite)
+		logView.SetBorderColor(tcell.ColorWhite)
+	}
+
+	focusPane := func(pane int) {
+		activePane = pane
+		updateBorders()
+
+		switch pane {
+		case readersPaneConfig:
+			opt.App.SetFocus(configArea)
+		default:
+			opt.App.SetFocus(table)
+		}
+	}
+
+	loadLog := func() {
+		if strings.TrimSpace(currentState.LogPath) == "" {
+			logView.SetText("[gray]logfile is not configured[-]")
+			return
+		}
+
+		_, _, _, height := logView.GetInnerRect()
+		if height <= 0 {
+			height = 50
+		}
+
+		text, err := readTailLines(currentState.LogPath, readersLogTailBytes, height)
+		if err != nil {
+			logView.SetText(fmt.Sprintf("[red]%s[-]", tview.Escape(err.Error())))
+			return
+		}
+
+		if strings.TrimSpace(text) == "" {
+			logView.SetText("[gray]log is empty[-]")
+			return
+		}
+
+		logView.SetText(tview.Escape(text))
+	}
+
+	loadSelectedConfig := func(force bool) {
+		row, _ := table.GetSelection()
+		deviceIndex := row - 1
+
+		if deviceIndex < 0 || deviceIndex >= len(currentDevices) {
+			currentState = selectedReaderState{}
+			configArea.SetTitle(" oscam.conf ")
+			configArea.SetText("", false)
+			logView.SetText("")
+			return
+		}
+
+		device := currentDevices[deviceIndex]
+
+		configPath := oscamConfigPathFromCommand(device.ProcessCmd)
+		if strings.TrimSpace(configPath) == "" {
+			currentState = selectedReaderState{Device: device}
+			configArea.SetTitle(" oscam.conf ")
+			configArea.SetText("", false)
+			logView.SetText("[gray]oscam config path not found in process command[-]")
+			return
+		}
+
+		if currentState.ConfigDirty && !force && currentState.ConfigPath == configPath {
+			return
+		}
+
+		configText, err := os.ReadFile(configPath)
+		if err != nil {
+			currentState = selectedReaderState{
+				Device:     device,
+				ConfigPath: configPath,
+			}
+			configArea.SetTitle(" " + configPath + " ")
+			configArea.SetText("", false)
+			logView.SetText(fmt.Sprintf("[red]%s[-]", tview.Escape(err.Error())))
+			return
+		}
+
+		logPath := oscamLogPathFromConfig(string(configText), filepath.Dir(configPath))
+
+		currentState = selectedReaderState{
+			Device:     device,
+			ConfigPath: configPath,
+			ConfigText: string(configText),
+			LogPath:    logPath,
+		}
+
+		configArea.SetTitle(" " + configPath + " ")
+		configArea.SetText(currentState.ConfigText, false)
+
+		loadLog()
+	}
+
+	saveConfig := func() {
+		if strings.TrimSpace(currentState.ConfigPath) == "" {
+			setStatus("[yellow]No oscam.conf selected[-]")
+			return
+		}
+
+		text := configArea.GetText()
+
+		if err := os.WriteFile(currentState.ConfigPath, []byte(text), 0644); err != nil {
+			setStatus(fmt.Sprintf("[red]Save failed: %s[-]", tview.Escape(err.Error())))
+			return
+		}
+
+		currentState.ConfigText = text
+		currentState.ConfigDirty = false
+		currentState.LogPath = oscamLogPathFromConfig(text, filepath.Dir(currentState.ConfigPath))
+
+		setStatus(fmt.Sprintf("[green]Saved %s[-]", tview.Escape(currentState.ConfigPath)))
+
+		loadLog()
+	}
+
+	loadDevices := func(keepSelection bool) {
+		selectedName := ""
+
+		if keepSelection {
+			row, _ := table.GetSelection()
+			deviceIndex := row - 1
+			if deviceIndex >= 0 && deviceIndex < len(currentDevices) {
+				selectedName = currentDevices[deviceIndex].Name
+			}
+		}
+
 		devices, err := ListDevices()
+		currentDevices = devices
 		renderDevices(table, devices, err)
+
+		if selectedName != "" {
+			for i, device := range devices {
+				if device.Name == selectedName {
+					table.Select(i+1, 0)
+					break
+				}
+			}
+		}
+
+		if !currentState.ConfigDirty {
+			loadSelectedConfig(false)
+		}
 	}
 
-	body.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if opt.HandleGlobalKeys != nil && opt.HandleGlobalKeys(event) {
-			return nil
+	killSelected := func() {
+		row, _ := table.GetSelection()
+		deviceIndex := row - 1
+
+		if deviceIndex < 0 || deviceIndex >= len(currentDevices) {
+			setStatus("[yellow]Select busy COM port first[-]")
+			return
 		}
 
-		switch event.Key() {
-		case tcell.KeyEsc:
-			closeDialog()
-			return nil
-
-		case tcell.KeyF5:
-			load()
-			return nil
+		device := currentDevices[deviceIndex]
+		if !device.Busy || device.ProcessPID <= 0 {
+			setStatus("[yellow]Selected COM port is free[-]")
+			return
 		}
 
-		return event
-	})
+		processTitle := fmt.Sprintf("%s (%d)", device.ProcessName, device.ProcessPID)
 
-	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if opt.HandleGlobalKeys != nil && opt.HandleGlobalKeys(event) {
-			return nil
-		}
+		modal := tview.NewModal()
+		modal.SetText(fmt.Sprintf(
+			"Kill process?\n\nDevice: %s\nTarget: %s\nProcess: %s\n\nThis is equivalent to kill -9 %d.",
+			displayDeviceName(device.Name),
+			device.Target,
+			processTitle,
+			device.ProcessPID,
+		))
+		modal.AddButtons([]string{"Kill", "Cancel"})
 
-		switch event.Key() {
-		case tcell.KeyEsc:
-			closeDialog()
-			return nil
+		modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			if opt.HandleGlobalKeys != nil && opt.HandleGlobalKeys(event) {
+				return nil
+			}
 
-		case tcell.KeyF5:
-			load()
-			return nil
-		}
+			if event.Key() == tcell.KeyEsc {
+				opt.Pages.RemovePage(opt.PageName + "-confirm")
+				opt.App.SetFocus(table)
+				return nil
+			}
 
-		return event
-	})
-
-	load()
-
-	opt.Pages.AddPage(opt.PageName, centerPrimitive(body, 100, 24), true, true)
-	opt.App.SetFocus(table)
-}
-
-func ListDevices() ([]Device, error) {
-	entries, err := os.ReadDir(serialByIDPath)
-	if err != nil {
-		return nil, err
-	}
-
-	devices := make([]Device, 0, len(entries))
-
-	for _, entry := range entries {
-		name := entry.Name()
-		path := filepath.Join(serialByIDPath, name)
-
-		target := ""
-
-		linkTarget, err := os.Readlink(path)
-		if err == nil {
-			target = filepath.Clean(filepath.Join(serialByIDPath, linkTarget))
-		} else {
-			target = err.Error()
-		}
-
-		devices = append(devices, Device{
-			Name:   name,
-			Path:   path,
-			Target: target,
+			return event
 		})
+
+		modal.SetDoneFunc(func(_ int, label string) {
+			opt.Pages.RemovePage(opt.PageName + "-confirm")
+			opt.App.SetFocus(table)
+
+			if label != "Kill" {
+				return
+			}
+
+			if err := killProcess(device.ProcessPID); err != nil {
+				setStatus(fmt.Sprintf("[red]Kill failed: %s[-]", tview.Escape(err.Error())))
+				return
+			}
+
+			setStatus(fmt.Sprintf(
+				"[green]Killed %s (%d)[-]",
+				tview.Escape(device.ProcessName),
+				device.ProcessPID,
+			))
+
+			loadDevices(true)
+		})
+
+		opt.Pages.AddPage(opt.PageName+"-confirm", centerPrimitive(modal, 72, 13), true, true)
+		opt.App.SetFocus(modal)
 	}
 
-	sort.Slice(devices, func(i, j int) bool {
-		return devices[i].Name < devices[j].Name
+	togglePane := func() {
+		switch activePane {
+		case readersPaneList:
+			focusPane(readersPaneConfig)
+		default:
+			focusPane(readersPaneList)
+		}
+	}
+
+	inputCapture := func(event *tcell.EventKey) *tcell.EventKey {
+		if opt.HandleGlobalKeys != nil && opt.HandleGlobalKeys(event) {
+			return nil
+		}
+
+		switch event.Key() {
+		case tcell.KeyEsc:
+			closeDialog()
+			return nil
+
+		case tcell.KeyTab, tcell.KeyBacktab:
+			togglePane()
+			return nil
+
+		case tcell.KeyCtrlS:
+			if activePane == readersPaneConfig {
+				saveConfig()
+				return nil
+			}
+
+		case tcell.KeyRune:
+			if event.Rune() == ' ' && activePane == readersPaneList {
+				killSelected()
+				return nil
+			}
+		}
+
+		return event
+	}
+
+	table.SetSelectedFunc(func(row int, _ int) {
+		if row <= 0 {
+			return
+		}
+
+		currentState.ConfigDirty = false
+		loadSelectedConfig(true)
 	})
 
-	return devices, nil
-}
+	table.SetSelectionChangedFunc(func(row int, _ int) {
+		if row <= 0 {
+			return
+		}
 
-func renderDevices(table *tview.Table, devices []Device, err error) {
-	table.Clear()
+		if currentState.ConfigDirty {
+			return
+		}
 
-	table.SetCell(0, 0, tview.NewTableCell(" Device").
-		SetTextColor(tcell.ColorYellow).
-		SetSelectable(false).
-		SetExpansion(1))
+		loadSelectedConfig(false)
+	})
 
-	table.SetCell(0, 1, tview.NewTableCell(" Target").
-		SetTextColor(tcell.ColorYellow).
-		SetSelectable(false).
-		SetExpansion(1))
+	configArea.SetChangedFunc(func() {
+		if strings.TrimSpace(currentState.ConfigPath) == "" {
+			return
+		}
 
-	if err != nil {
-		table.SetCell(1, 0, tview.NewTableCell(" Error").
-			SetTextColor(tcell.ColorRed).
-			SetExpansion(1))
+		currentState.ConfigDirty = configArea.GetText() != currentState.ConfigText
+	})
 
-		table.SetCell(1, 1, tview.NewTableCell(fmt.Sprintf(" %s", err.Error())).
-			SetTextColor(tcell.ColorRed).
-			SetExpansion(1))
+	table.SetInputCapture(inputCapture)
+	configArea.SetInputCapture(inputCapture)
+	body.SetInputCapture(inputCapture)
 
-		return
-	}
+	loadDevices(false)
+	updateBorders()
 
-	if len(devices) == 0 {
-		table.SetCell(1, 0, tview.NewTableCell(" No devices found").
-			SetTextColor(tcell.ColorGray).
-			SetExpansion(1))
+	go func() {
+		ticker := time.NewTicker(readersRefreshPeriod)
+		defer ticker.Stop()
 
-		table.SetCell(1, 1, tview.NewTableCell(" "+serialByIDPath).
-			SetTextColor(tcell.ColorGray).
-			SetExpansion(1))
+		for {
+			select {
+			case <-ctx.Done():
+				return
 
-		return
-	}
+			case <-ticker.C:
+				devices, err := ListDevices()
 
-	for i, device := range devices {
-		row := i + 1
+				opt.App.QueueUpdateDraw(func() {
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
 
-		table.SetCell(row, 0, tview.NewTableCell(" "+device.Name).
-			SetTextColor(tcell.ColorWhite).
-			SetExpansion(1))
+					selectedName := ""
+					row, _ := table.GetSelection()
+					deviceIndex := row - 1
+					if deviceIndex >= 0 && deviceIndex < len(currentDevices) {
+						selectedName = currentDevices[deviceIndex].Name
+					}
 
-		table.SetCell(row, 1, tview.NewTableCell(" "+device.Target).
-			SetTextColor(tcell.ColorGreen).
-			SetExpansion(1))
-	}
-}
+					currentDevices = devices
+					renderDevices(table, devices, err)
 
-func centerPrimitive(p tview.Primitive, width int, height int) tview.Primitive {
-	row := tview.NewFlex()
-	row.SetDirection(tview.FlexRow)
-	row.AddItem(nil, 0, 1, false)
-	row.AddItem(p, height, 1, true)
-	row.AddItem(nil, 0, 1, false)
+					if selectedName != "" {
+						for i, device := range devices {
+							if device.Name == selectedName {
+								table.Select(i+1, 0)
+								break
+							}
+						}
+					}
 
-	root := tview.NewFlex()
-	root.SetDirection(tview.FlexColumn)
-	root.AddItem(nil, 0, 1, false)
-	root.AddItem(row, width, 1, true)
-	root.AddItem(nil, 0, 1, false)
+					if !currentState.ConfigDirty {
+						loadSelectedConfig(false)
+					}
 
-	return root
+					loadLog()
+				})
+			}
+		}
+	}()
+
+	opt.Pages.AddPage(opt.PageName, body, true, true)
+	focusPane(readersPaneList)
 }
