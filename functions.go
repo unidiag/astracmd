@@ -60,7 +60,6 @@ func getFileExtension(filePath string) string {
 	return ""
 }
 
-// определяет что запущено в дебаг-режиме
 func isRunThroughGoRun() bool {
 	exePath, err := os.Executable()
 	if err != nil {

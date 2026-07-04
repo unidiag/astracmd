@@ -95,6 +95,7 @@ func ShowAdapterAnalyzerDialog(
 				parsed,
 				knownStreams,
 				scanDelay,
+				opt.ServiceProvider(),
 			)
 
 			opt.App.QueueUpdateDraw(func() {

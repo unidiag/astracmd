@@ -265,7 +265,7 @@ func ShowAdapterDialog(
 		}
 
 		go func() {
-			result := astra.AstraScanAddStreams(context.Background(), conn, parsed, existingStreams, scanDelay)
+			result := astra.AstraScanAddStreams(context.Background(), conn, parsed, existingStreams, scanDelay, opt.ServiceProvider())
 
 			opt.App.QueueUpdateDraw(func() {
 				scanInProgress = false

@@ -79,6 +79,7 @@ func AstraScanAddStreams(
 	adapter Adapter,
 	existingStreams []Stream,
 	checkDelay time.Duration,
+	serviceProvider string,
 ) AstraScanAddStreamsResult {
 	scanID, err := AstraScanInit(ctx, conn, adapter)
 	if err != nil {
@@ -96,7 +97,7 @@ func AstraScanAddStreams(
 		return AstraScanAddStreamsResult{OK: false, ScanID: scanID, Err: err}
 	}
 
-	streams := BuildStreamsFromScan(adapter, existingStreams, scan.Scan)
+	streams := BuildStreamsFromScan(adapter, existingStreams, scan.Scan, serviceProvider)
 	if len(streams) == 0 {
 		return AstraScanAddStreamsResult{
 			OK:     true,
@@ -231,6 +232,7 @@ func BuildStreamsFromScan(
 	adapter Adapter,
 	existingStreams []Stream,
 	tables []astraScanTable,
+	serviceProvider string,
 ) []Stream {
 	serviceNames := make(map[int]string)
 	videoPNRs := make(map[int]bool)
@@ -300,7 +302,7 @@ func BuildStreamsFromScan(
 			// FilterNot: "101,102",
 
 			ServiceName:     StreamServiceName(channelName),
-			ServiceProvider: "Astra",
+			ServiceProvider: strings.TrimSpace(serviceProvider),
 		}
 
 		streams = append(streams, stream)
