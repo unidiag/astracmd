@@ -86,7 +86,7 @@ func AstraTestSoftcam(
 		return AstraTestSoftcamResult{OK: false, Err: err}
 	}
 
-	responseBody, err := astraControlRequest(ctx, conn, body)
+	responseBody, err := controlRequest(ctx, conn, body)
 	if err != nil {
 		return AstraTestSoftcamResult{OK: false, Err: err}
 	}
@@ -174,7 +174,7 @@ func AstraSaveSoftcam(
 		return AstraSaveSoftcamResult{OK: false, Err: err}
 	}
 
-	_, err = astraControlRequest(ctx, conn, body)
+	_, err = controlRequest(ctx, conn, body)
 	if err != nil {
 		return AstraSaveSoftcamResult{OK: false, Err: err}
 	}
@@ -222,7 +222,7 @@ func AstraRemoveSoftcam(
 		return AstraSaveSoftcamResult{OK: false, Err: err}
 	}
 
-	_, err = astraControlRequest(ctx, conn, body)
+	_, err = controlRequest(ctx, conn, body)
 	if err != nil {
 		return AstraSaveSoftcamResult{OK: false, Err: err}
 	}

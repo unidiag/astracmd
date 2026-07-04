@@ -49,7 +49,7 @@ func AstraSetLog(ctx context.Context, conn Connection, debug bool) AstraSetLogRe
 		return AstraSetLogResult{OK: false, Err: err}
 	}
 
-	raw, err := astraControlRequest(ctx, conn, body)
+	raw, err := controlRequest(ctx, conn, body)
 	if err != nil {
 		return AstraSetLogResult{OK: false, Err: err}
 	}
@@ -75,7 +75,7 @@ func AstraSetLog(ctx context.Context, conn Connection, debug bool) AstraSetLogRe
 }
 
 func AstraLog(ctx context.Context, conn Connection) AstraLogResult {
-	raw, err := astraControlRequest(ctx, conn, []byte(`{"cmd":"log"}`))
+	raw, err := controlRequest(ctx, conn, []byte(`{"cmd":"log"}`))
 	if err != nil {
 		return AstraLogResult{OK: false, Err: err}
 	}

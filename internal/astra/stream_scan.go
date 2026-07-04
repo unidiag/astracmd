@@ -138,7 +138,7 @@ func AstraStreamScanInit(ctx context.Context, conn Connection, streamID string, 
 		}
 	}
 
-	raw, err := astraControlRequest(ctx, conn, body)
+	raw, err := controlRequest(ctx, conn, body)
 	if err != nil {
 		return AstraStreamScanInitResult{
 			OK:  false,

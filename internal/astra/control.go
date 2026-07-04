@@ -82,7 +82,7 @@ type DeleteItemResult struct {
 }
 
 func AstraVersion(ctx context.Context, conn Connection) AstraVersionResult {
-	raw, err := astraControlRequest(ctx, conn, []byte(`{"cmd":"version"}`))
+	raw, err := controlRequest(ctx, conn, []byte(`{"cmd":"version"}`))
 	if err != nil {
 		return AstraVersionResult{Online: false, Err: err}
 	}
@@ -115,8 +115,8 @@ func parseAstraVersion(raw []byte) (string, string) {
 	return strings.TrimSpace(resp.Version), strings.TrimSpace(resp.Commit)
 }
 
-func AstraLoad(ctx context.Context, conn Connection) LoadResult {
-	raw, err := astraControlRequest(ctx, conn, []byte(`{"cmd":"load"}`))
+func load(ctx context.Context, conn Connection) LoadResult {
+	raw, err := controlRequest(ctx, conn, []byte(`{"cmd":"load"}`))
 	if err != nil {
 		return LoadResult{Online: false, Err: err}
 	}
@@ -132,8 +132,8 @@ func AstraLoad(ctx context.Context, conn Connection) LoadResult {
 	}
 }
 
-func AstraRestart(ctx context.Context, conn Connection) RestartResult {
-	raw, err := astraControlRequest(ctx, conn, []byte(`{"cmd":"restart"}`))
+func restart(ctx context.Context, conn Connection) RestartResult {
+	raw, err := controlRequest(ctx, conn, []byte(`{"cmd":"restart"}`))
 	if err != nil {
 		return RestartResult{OK: false, Err: err}
 	}
@@ -158,7 +158,7 @@ func AstraRestart(ctx context.Context, conn Connection) RestartResult {
 	return RestartResult{OK: true}
 }
 
-func AstraSetLicense(ctx context.Context, conn Connection, license string) SetLicenseResult {
+func setLicense(ctx context.Context, conn Connection, license string) SetLicenseResult {
 	payload := struct {
 		Cmd     string `json:"cmd"`
 		License string `json:"license"`
@@ -172,7 +172,7 @@ func AstraSetLicense(ctx context.Context, conn Connection, license string) SetLi
 		return SetLicenseResult{OK: false, Err: err}
 	}
 
-	_, err = astraControlRequest(ctx, conn, body)
+	_, err = controlRequest(ctx, conn, body)
 	if err != nil {
 		return SetLicenseResult{OK: false, Err: err}
 	}
@@ -180,8 +180,8 @@ func AstraSetLicense(ctx context.Context, conn Connection, license string) SetLi
 	return SetLicenseResult{OK: true}
 }
 
-func AstraGetStatus(ctx context.Context, conn Connection) StatusResult {
-	raw, err := astraControlRequest(ctx, conn, []byte(`{"cmd":"status"}`))
+func getStatus(ctx context.Context, conn Connection) StatusResult {
+	raw, err := controlRequest(ctx, conn, []byte(`{"cmd":"status"}`))
 	if err != nil {
 		return StatusResult{OK: false, Err: err}
 	}
@@ -197,15 +197,15 @@ func AstraGetStatus(ctx context.Context, conn Connection) StatusResult {
 	}
 }
 
-func AstraRestartStream(ctx context.Context, conn Connection, id string) RestartItemResult {
-	return AstraRestartItem(ctx, conn, "restart-stream", id)
+func restartStream(ctx context.Context, conn Connection, id string) RestartItemResult {
+	return restartItem(ctx, conn, "restart-stream", id)
 }
 
-func AstraRestartAdapter(ctx context.Context, conn Connection, id string) RestartItemResult {
-	return AstraRestartItem(ctx, conn, "restart-adapter", id)
+func restartAdapter(ctx context.Context, conn Connection, id string) RestartItemResult {
+	return restartItem(ctx, conn, "restart-adapter", id)
 }
 
-func AstraRestartItem(ctx context.Context, conn Connection, cmd string, id string) RestartItemResult {
+func restartItem(ctx context.Context, conn Connection, cmd string, id string) RestartItemResult {
 	payload := struct {
 		Cmd string `json:"cmd"`
 		ID  string `json:"id"`
@@ -219,7 +219,7 @@ func AstraRestartItem(ctx context.Context, conn Connection, cmd string, id strin
 		return RestartItemResult{OK: false, Err: err}
 	}
 
-	_, err = astraControlRequest(ctx, conn, body)
+	_, err = controlRequest(ctx, conn, body)
 	if err != nil {
 		return RestartItemResult{OK: false, Err: err}
 	}
@@ -289,7 +289,7 @@ func AstraSaveAdapter(ctx context.Context, conn Connection, adapter Adapter) Ast
 		return AstraSaveAdapterResult{OK: false, Err: err}
 	}
 
-	_, err = astraControlRequest(ctx, conn, body)
+	_, err = controlRequest(ctx, conn, body)
 	if err != nil {
 		return AstraSaveAdapterResult{OK: false, Err: err}
 	}
@@ -297,7 +297,7 @@ func AstraSaveAdapter(ctx context.Context, conn Connection, adapter Adapter) Ast
 	return AstraSaveAdapterResult{OK: true}
 }
 
-func AstraDeleteAdapter(ctx context.Context, conn Connection, id string) DeleteItemResult {
+func deleteAdapter(ctx context.Context, conn Connection, id string) DeleteItemResult {
 	payload := struct {
 		Cmd     string `json:"cmd"`
 		ID      string `json:"id"`
@@ -316,7 +316,7 @@ func AstraDeleteAdapter(ctx context.Context, conn Connection, id string) DeleteI
 		return DeleteItemResult{OK: false, Err: err}
 	}
 
-	_, err = astraControlRequest(ctx, conn, body)
+	_, err = controlRequest(ctx, conn, body)
 	if err != nil {
 		return DeleteItemResult{OK: false, Err: err}
 	}
@@ -392,7 +392,7 @@ func AstraSaveStream(ctx context.Context, conn Connection, stream Stream) AstraS
 		return AstraSaveStreamResult{OK: false, Err: err}
 	}
 
-	_, err = astraControlRequest(ctx, conn, body)
+	_, err = controlRequest(ctx, conn, body)
 	if err != nil {
 		return AstraSaveStreamResult{OK: false, Err: err}
 	}
@@ -400,7 +400,7 @@ func AstraSaveStream(ctx context.Context, conn Connection, stream Stream) AstraS
 	return AstraSaveStreamResult{OK: true}
 }
 
-func AstraDeleteStream(ctx context.Context, conn Connection, id string) DeleteItemResult {
+func deleteStream(ctx context.Context, conn Connection, id string) DeleteItemResult {
 	payload := struct {
 		Cmd    string `json:"cmd"`
 		ID     string `json:"id"`
@@ -419,7 +419,7 @@ func AstraDeleteStream(ctx context.Context, conn Connection, id string) DeleteIt
 		return DeleteItemResult{OK: false, Err: err}
 	}
 
-	_, err = astraControlRequest(ctx, conn, body)
+	_, err = controlRequest(ctx, conn, body)
 	if err != nil {
 		return DeleteItemResult{OK: false, Err: err}
 	}
@@ -427,7 +427,7 @@ func AstraDeleteStream(ctx context.Context, conn Connection, id string) DeleteIt
 	return DeleteItemResult{OK: true}
 }
 
-func astraControlRequest(ctx context.Context, conn Connection, body []byte) ([]byte, error) {
+func controlRequest(ctx context.Context, conn Connection, body []byte) ([]byte, error) {
 	url := fmt.Sprintf("http://%s:%d/control/", conn.Interface, conn.Port)
 
 	reqCtx, cancel := context.WithTimeout(ctx, astraRequestTimeout)

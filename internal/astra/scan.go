@@ -171,7 +171,7 @@ func AstraScanInit(ctx context.Context, conn Connection, adapter Adapter) (strin
 		return "", err
 	}
 
-	raw, err := astraControlRequest(ctx, conn, body)
+	raw, err := controlRequest(ctx, conn, body)
 	if err != nil {
 		return "", err
 	}
@@ -206,7 +206,7 @@ func AstraScanCheck(ctx context.Context, conn Connection, scanID string) (astraS
 		return astraScanCheckResponse{}, err
 	}
 
-	raw, err := astraControlRequest(ctx, conn, body)
+	raw, err := controlRequest(ctx, conn, body)
 	if err != nil {
 		return astraScanCheckResponse{}, err
 	}
