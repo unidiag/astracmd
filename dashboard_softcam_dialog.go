@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"main/internal/astra"
 	"sort"
 	"strings"
 	"time"
@@ -11,7 +12,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-func dashboardGenerateSoftcamID(existing []AstraSoftcam) string {
+func dashboardGenerateSoftcamID(existing []astra.AstraSoftcam) string {
 	used := make(map[string]bool)
 
 	for _, cam := range existing {
@@ -65,8 +66,8 @@ func dashboardIsSoftcamKeyValid(value string) bool {
 }
 
 func (ui *UI) ShowSoftCAMDialog(
-	conn AstraConnection,
-	config AstraConfig,
+	conn astra.AstraConnection,
+	config astra.AstraConfig,
 	onSaved func(),
 	onClose func(),
 ) {
@@ -76,7 +77,7 @@ func (ui *UI) ShowSoftCAMDialog(
 	isNewCam := true
 	softcams := config.Softcams
 
-	cam := AstraSoftcam{
+	cam := astra.AstraSoftcam{
 		ID:   dashboardGenerateSoftcamID(softcams),
 		Name: "",
 		Type: "newcamd",
@@ -222,7 +223,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			remove = value
 		})
 
-	loadCamToFields := func(item AstraSoftcam, newCam bool) {
+	loadCamToFields := func(item astra.AstraSoftcam, newCam bool) {
 		isUpdating = true
 		defer func() {
 			isUpdating = false
@@ -259,7 +260,7 @@ func (ui *UI) ShowSoftCAMDialog(
 
 		sourceIndex := optionIndexes[index]
 		if sourceIndex < 0 {
-			loadCamToFields(AstraSoftcam{
+			loadCamToFields(astra.AstraSoftcam{
 				ID:   dashboardGenerateSoftcamID(softcams),
 				Name: "",
 				Type: "newcamd",
@@ -302,7 +303,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		ui.app.SetFocus(modal)
 	}
 
-	formatSoftCAMTestSuccess := func(result AstraTestSoftcamResult) string {
+	formatSoftCAMTestSuccess := func(result astra.AstraTestSoftcamResult) string {
 		var b strings.Builder
 
 		b.WriteString("SoftCAM test successful\n\n")
@@ -337,7 +338,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		}
 
 		if remove && !isNewCam {
-			result := AstraRemoveSoftcam(context.Background(), conn, config.GID, currentID)
+			result := astra.AstraRemoveSoftcam(context.Background(), conn, config.GID, currentID)
 			if !result.OK {
 				if result.Err != nil {
 					ui.ShowError(result.Err.Error(), form)
@@ -368,7 +369,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			return
 		}
 
-		savedCam := AstraSoftcam{
+		savedCam := astra.AstraSoftcam{
 			ID:         currentID,
 			Name:       strings.TrimSpace(name),
 			Type:       currentType,
@@ -405,7 +406,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			return
 		}
 
-		result := AstraSaveSoftcam(context.Background(), conn, config.GID, savedCam)
+		result := astra.AstraSaveSoftcam(context.Background(), conn, config.GID, savedCam)
 		if !result.OK {
 			if result.Err != nil {
 				ui.ShowError(result.Err.Error(), form)
@@ -521,7 +522,7 @@ func (ui *UI) ShowSoftCAMDialog(
 			return
 		}
 
-		testCam := AstraSoftcam{
+		testCam := astra.AstraSoftcam{
 			ID:         currentID,
 			Name:       strings.TrimSpace(name),
 			Type:       currentType,
@@ -568,7 +569,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		startTestSpinner()
 
 		go func() {
-			result := AstraTestSoftcam(context.Background(), conn, testCam)
+			result := astra.AstraTestSoftcam(context.Background(), conn, testCam)
 
 			ui.app.QueueUpdateDraw(func() {
 				testInProgress = false
@@ -614,7 +615,7 @@ func (ui *UI) ShowSoftCAMDialog(
 		}
 		newName += " [CLONE]"
 
-		clonedCam := AstraSoftcam{
+		clonedCam := astra.AstraSoftcam{
 			ID:         newID,
 			Name:       newName,
 			Type:       strings.TrimSpace(cam.Type),

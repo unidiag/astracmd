@@ -3,14 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"main/internal/astra"
 	"strings"
 )
 
 func dashboardRestartAstra(
 	ctx context.Context,
-	conn AstraConnection,
+	client *astra.AstraClient,
 ) error {
-	result := AstraRestart(ctx, conn)
+	result := client.Restart(ctx)
 	if result.OK {
 		return nil
 	}
@@ -24,15 +25,15 @@ func dashboardRestartAstra(
 
 func dashboardRestartStream(
 	ctx context.Context,
-	conn AstraConnection,
-	stream AstraStream,
+	client *astra.AstraClient,
+	stream astra.AstraStream,
 ) error {
 	streamID := strings.TrimSpace(stream.ID)
 	if streamID == "" {
 		return fmt.Errorf("stream id is empty")
 	}
 
-	result := AstraRestartStream(ctx, conn, streamID)
+	result := client.RestartStream(ctx, streamID)
 	if result.OK {
 		return nil
 	}
@@ -46,15 +47,15 @@ func dashboardRestartStream(
 
 func dashboardDeleteStream(
 	ctx context.Context,
-	conn AstraConnection,
-	stream AstraStream,
+	client *astra.AstraClient,
+	stream astra.AstraStream,
 ) error {
 	streamID := strings.TrimSpace(stream.ID)
 	if streamID == "" {
 		return fmt.Errorf("stream id is empty")
 	}
 
-	result := AstraDeleteStream(ctx, conn, streamID)
+	result := client.DeleteStream(ctx, streamID)
 	if result.OK {
 		return nil
 	}
@@ -68,47 +69,47 @@ func dashboardDeleteStream(
 
 func dashboardReloadConfig(
 	ctx context.Context,
-	conn AstraConnection,
-) (AstraConfig, error) {
-	result := AstraLoad(ctx, conn)
+	client *astra.AstraClient,
+) (astra.AstraConfig, error) {
+	result := client.Load(ctx)
 	if result.Online {
 		return result.Config, nil
 	}
 
 	if result.Err != nil {
-		return AstraConfig{}, result.Err
+		return astra.AstraConfig{}, result.Err
 	}
 
-	return AstraConfig{}, fmt.Errorf("astra config load failed")
+	return astra.AstraConfig{}, fmt.Errorf("astra config load failed")
 }
 
 func dashboardLoadAstraStatus(
 	ctx context.Context,
-	conn AstraConnection,
-) (AstraStatus, error) {
-	result := AstraGetStatus(ctx, conn)
+	client *astra.AstraClient,
+) (astra.AstraStatus, error) {
+	result := client.GetStatus(ctx)
 	if result.OK {
 		return result.Status, nil
 	}
 
 	if result.Err != nil {
-		return AstraStatus{}, result.Err
+		return astra.AstraStatus{}, result.Err
 	}
 
-	return AstraStatus{}, fmt.Errorf("astra status load failed")
+	return astra.AstraStatus{}, fmt.Errorf("astra status load failed")
 }
 
 func dashboardRestartAdapter(
 	ctx context.Context,
-	conn AstraConnection,
-	adapter AstraAdapter,
+	client *astra.AstraClient,
+	adapter astra.AstraAdapter,
 ) error {
 	adapterID := strings.TrimSpace(adapter.ID)
 	if adapterID == "" {
 		return fmt.Errorf("adapter id is empty")
 	}
 
-	result := AstraRestartAdapter(ctx, conn, adapterID)
+	result := client.RestartAdapter(ctx, adapterID)
 	if result.OK {
 		return nil
 	}
@@ -122,15 +123,15 @@ func dashboardRestartAdapter(
 
 func dashboardDeleteAdapter(
 	ctx context.Context,
-	conn AstraConnection,
-	adapter AstraAdapter,
+	client *astra.AstraClient,
+	adapter astra.AstraAdapter,
 ) error {
 	adapterID := strings.TrimSpace(adapter.ID)
 	if adapterID == "" {
 		return fmt.Errorf("adapter id is empty")
 	}
 
-	result := AstraDeleteAdapter(ctx, conn, adapterID)
+	result := client.DeleteAdapter(ctx, adapterID)
 	if result.OK {
 		return nil
 	}

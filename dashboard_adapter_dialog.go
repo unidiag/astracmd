@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"main/internal/astra"
 	"strconv"
 	"strings"
 	"time"
@@ -12,19 +13,19 @@ import (
 )
 
 func (ui *UI) ShowAdapterDialog(
-	conn AstraConnection,
-	editAdapter *AstraAdapter,
-	existingAdapters []AstraAdapter,
-	existingStreams []AstraStream,
-	onOK func(AstraAdapter),
-	onScanOK func(AstraAdapter, int),
+	conn astra.AstraConnection,
+	editAdapter *astra.AstraAdapter,
+	existingAdapters []astra.AstraAdapter,
+	existingStreams []astra.AstraStream,
+	onOK func(astra.AstraAdapter),
+	onScanOK func(astra.AstraAdapter, int),
 	onError func(error),
 ) {
 	ui.pages.RemovePage(pageDialog)
 
 	isEdit := editAdapter != nil
 
-	adapter := AstraAdapter{
+	adapter := astra.AstraAdapter{
 		ID:      dashboardGenerateAdapterID(existingAdapters),
 		Name:    "",
 		Type:    "S2",
@@ -104,7 +105,7 @@ func (ui *UI) ShowAdapterDialog(
 		}
 
 		go func() {
-			result := AstraSaveAdapter(context.Background(), conn, parsed)
+			result := astra.AstraSaveAdapter(context.Background(), conn, parsed)
 
 			ui.app.QueueUpdateDraw(func() {
 				if !result.OK {
@@ -263,7 +264,7 @@ func (ui *UI) ShowAdapterDialog(
 		}
 
 		go func() {
-			result := AstraScanAddStreams(context.Background(), conn, parsed, existingStreams, scanDelay)
+			result := astra.AstraScanAddStreams(context.Background(), conn, parsed, existingStreams, scanDelay)
 
 			ui.app.QueueUpdateDraw(func() {
 				scanInProgress = false
@@ -463,7 +464,7 @@ func (ui *UI) ShowAdapterDialog(
 	setFocusByIndex(0)
 }
 
-func dashboardAdapterTransponderText(adapter AstraAdapter) string {
+func dashboardAdapterTransponderText(adapter astra.AstraAdapter) string {
 	tpType := strings.ToUpper(strings.TrimSpace(adapter.Type))
 	frequency := strings.TrimSpace(adapter.Frequency)
 	polarization := strings.ToUpper(strings.TrimSpace(adapter.Polarization))
@@ -490,7 +491,7 @@ func dashboardAdapterTransponderText(adapter AstraAdapter) string {
 	}
 }
 
-func dashboardAdapterLNBText(adapter AstraAdapter) string {
+func dashboardAdapterLNBText(adapter astra.AstraAdapter) string {
 	lof1 := strings.TrimSpace(adapter.Lof1)
 	lof2 := strings.TrimSpace(adapter.Lof2)
 	slof := strings.TrimSpace(adapter.Slof)
@@ -503,35 +504,35 @@ func dashboardAdapterLNBText(adapter AstraAdapter) string {
 }
 
 func dashboardBuildAdapterFromForm(
-	base AstraAdapter,
+	base astra.AstraAdapter,
 	enable bool,
 	name string,
 	adapterNumber string,
 	transponder string,
 	lnb string,
 	mode string,
-) (AstraAdapter, error) {
+) (astra.AstraAdapter, error) {
 	base.Enable = enable
 	base.Name = strings.TrimSpace(name)
 
 	if base.Name == "" {
-		return AstraAdapter{}, fmt.Errorf("adapter name is required")
+		return astra.AstraAdapter{}, fmt.Errorf("adapter name is required")
 	}
 
 	n, err := strconv.Atoi(strings.TrimSpace(adapterNumber))
 	if err != nil {
-		return AstraAdapter{}, fmt.Errorf("adapter number must be integer")
+		return astra.AstraAdapter{}, fmt.Errorf("adapter number must be integer")
 	}
 
 	if n < 0 {
-		return AstraAdapter{}, fmt.Errorf("adapter number must be >= 0")
+		return astra.AstraAdapter{}, fmt.Errorf("adapter number must be >= 0")
 	}
 
 	base.Adapter = n
 
 	tpType, frequency, polarization, symbolrate, err := dashboardParseAdapterTransponder(transponder)
 	if err != nil {
-		return AstraAdapter{}, err
+		return astra.AstraAdapter{}, err
 	}
 
 	base.Type = tpType
@@ -541,7 +542,7 @@ func dashboardBuildAdapterFromForm(
 
 	lof1, lof2, slof, err := dashboardParseAdapterLNB(tpType, lnb)
 	if err != nil {
-		return AstraAdapter{}, err
+		return astra.AstraAdapter{}, err
 	}
 
 	base.Lof1 = lof1
@@ -554,7 +555,7 @@ func dashboardBuildAdapterFromForm(
 
 	modulation, err := dashboardParseAdapterModulation(mode)
 	if err != nil {
-		return AstraAdapter{}, err
+		return astra.AstraAdapter{}, err
 	}
 
 	base.Modulation = modulation
@@ -708,7 +709,7 @@ func dashboardOnlyIntegerInput(text string, _ rune) bool {
 	return err == nil
 }
 
-func dashboardGenerateAdapterID(adapters []AstraAdapter) string {
+func dashboardGenerateAdapterID(adapters []astra.AstraAdapter) string {
 	used := make(map[string]bool)
 
 	for _, adapter := range adapters {

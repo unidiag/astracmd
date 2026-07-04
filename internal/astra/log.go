@@ -1,4 +1,4 @@
-package main
+package astra
 
 import (
 	"context"

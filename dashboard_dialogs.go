@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"main/internal/astra"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ConfirmRestartAstra(conn AstraConnection, onOK func(), onError func(error)) {
+func (ui *UI) ConfirmRestartAstra(conn astra.AstraConnection, onOK func(), onError func(error)) {
 	modal := tview.NewModal()
 	modal.SetText("Are you sure restart Astra?")
 	modal.AddButtons([]string{"Restart", "Cancel"})
@@ -23,7 +24,8 @@ func (ui *UI) ConfirmRestartAstra(conn AstraConnection, onOK func(), onError fun
 		ui.pages.RemovePage(pageDialog)
 
 		go func() {
-			err := dashboardRestartAstra(context.Background(), conn)
+			client := astra.NewAstraClient(conn)
+			err := dashboardRestartAstra(context.Background(), client)
 
 			ui.app.QueueUpdateDraw(func() {
 				if err == nil {
@@ -58,7 +60,7 @@ func (ui *UI) ConfirmRestartAstra(conn AstraConnection, onOK func(), onError fun
 	ui.app.SetFocus(modal)
 }
 
-func (ui *UI) ShowLicenseDialog(conn AstraConnection, onOK func(), onError func(error)) {
+func (ui *UI) ShowLicenseDialog(conn astra.AstraConnection, onOK func(), onError func(error)) {
 	license := ""
 
 	emailView := tview.NewTextView()
@@ -93,7 +95,7 @@ func (ui *UI) ShowLicenseDialog(conn AstraConnection, onOK func(), onError func(
 			return
 		}
 
-		if !isValidLicense(license) {
+		if !astra.IsValidLicense(license) {
 			ui.ShowError("license must be exactly 32 hex characters", form)
 			return
 		}
@@ -101,7 +103,8 @@ func (ui *UI) ShowLicenseDialog(conn AstraConnection, onOK func(), onError func(
 		ui.pages.RemovePage(pageDialog)
 
 		go func() {
-			result := AstraSetLicense(context.Background(), conn, license)
+			client := astra.NewAstraClient(conn)
+			result := client.SetLicense(context.Background(), license)
 
 			ui.app.QueueUpdateDraw(func() {
 				if result.OK {
@@ -167,7 +170,8 @@ func (ui *UI) ShowLicenseDialog(conn AstraConnection, onOK func(), onError func(
 	ui.app.SetFocus(form)
 
 	go func() {
-		status, err := dashboardLoadAstraStatus(context.Background(), conn)
+		client := astra.NewAstraClient(conn)
+		status, err := dashboardLoadAstraStatus(context.Background(), client)
 
 		ui.app.QueueUpdateDraw(func() {
 			if err != nil {

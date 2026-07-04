@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"main/internal/astra"
 	"sync/atomic"
 	"time"
 )
@@ -16,7 +17,7 @@ type DashboardVersionCallbacks struct {
 
 func dashboardStartVersionWatcher(
 	ctx context.Context,
-	conn AstraConnection,
+	conn astra.AstraConnection,
 	forceOfflineUntil *atomic.Int64,
 	queueUpdate func(func()),
 	interval time.Duration,
@@ -27,7 +28,7 @@ func dashboardStartVersionWatcher(
 	}
 
 	update := func() {
-		result := AstraVersion(ctx, conn)
+		result := astra.AstraVersion(ctx, conn)
 
 		queueUpdate(func() {
 			if forceOfflineUntil != nil && time.Now().UnixNano() < forceOfflineUntil.Load() {

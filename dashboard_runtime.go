@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"main/internal/astra"
 	"strings"
 	"sync/atomic"
 
@@ -11,7 +12,8 @@ import (
 
 type DashboardRuntime struct {
 	ui     *UI
-	conn   AstraConnection
+	conn   astra.AstraConnection
+	client *astra.AstraClient
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -24,15 +26,15 @@ type DashboardRuntime struct {
 
 	debugLogEnabled bool
 
-	currentConfig    AstraConfig
-	currentStreamMap map[string][]AstraStream
+	currentConfig    astra.AstraConfig
+	currentStreamMap map[string][]astra.AstraStream
 
-	currentLogItems []AstraLogItem
+	currentLogItems []astra.AstraLogItem
 	lastLogID       int64
-	visibleStreams  []AstraStream
+	visibleStreams  []astra.AstraStream
 
-	streamStates  map[string]AstraStreamState
-	adapterStates map[string]AstraAdapterState
+	streamStates  map[string]astra.AstraStreamState
+	adapterStates map[string]astra.AstraAdapterState
 
 	selectedStreamIDs map[string]bool
 
@@ -51,22 +53,23 @@ type DashboardRuntime struct {
 
 func NewDashboardRuntime(
 	ui *UI,
-	conn AstraConnection,
+	conn astra.AstraConnection,
 	ctx context.Context,
 	cancel context.CancelFunc,
 ) *DashboardRuntime {
 	rt := &DashboardRuntime{
 		ui:     ui,
 		conn:   conn,
+		client: astra.NewAstraClient(conn),
 		ctx:    ctx,
 		cancel: cancel,
 
 		activePane:      dashboardPaneAdapters,
 		debugLogEnabled: conn.Debug,
 
-		currentStreamMap: make(map[string][]AstraStream),
-		streamStates:     make(map[string]AstraStreamState),
-		adapterStates:    make(map[string]AstraAdapterState),
+		currentStreamMap: make(map[string][]astra.AstraStream),
+		streamStates:     make(map[string]astra.AstraStreamState),
+		adapterStates:    make(map[string]astra.AstraAdapterState),
 
 		selectedStreamIDs: make(map[string]bool),
 	}
@@ -161,14 +164,14 @@ func (rt *DashboardRuntime) SelectedAdapterID() string {
 	)
 }
 
-func (rt *DashboardRuntime) SelectedAdapter() (AstraAdapter, bool) {
+func (rt *DashboardRuntime) SelectedAdapter() (astra.AstraAdapter, bool) {
 	return dashboardGetSelectedAdapter(
 		rt.adaptersTable,
 		rt.currentConfig.Adapters,
 	)
 }
 
-func (rt *DashboardRuntime) SelectedStream() (AstraStream, bool) {
+func (rt *DashboardRuntime) SelectedStream() (astra.AstraStream, bool) {
 	return dashboardGetSelectedStream(
 		rt.streamsTable,
 		rt.visibleStreams,
@@ -273,7 +276,7 @@ func (rt *DashboardRuntime) SetActivePane(pane int) {
 	rt.RenderLog()
 }
 
-func (rt *DashboardRuntime) AppendLogItems(items []AstraLogItem) {
+func (rt *DashboardRuntime) AppendLogItems(items []astra.AstraLogItem) {
 	if len(items) == 0 {
 		return
 	}
@@ -335,12 +338,12 @@ func (rt *DashboardRuntime) ToggleSelectedStreamMark() {
 	}
 }
 
-func (rt *DashboardRuntime) MarkedStreams() []AstraStream {
+func (rt *DashboardRuntime) MarkedStreams() []astra.AstraStream {
 	if len(rt.selectedStreamIDs) == 0 {
 		return nil
 	}
 
-	items := make([]AstraStream, 0, len(rt.selectedStreamIDs))
+	items := make([]astra.AstraStream, 0, len(rt.selectedStreamIDs))
 
 	for _, stream := range rt.visibleStreams {
 		streamID := strings.TrimSpace(stream.ID)
@@ -386,7 +389,7 @@ func (rt *DashboardRuntime) CleanupMarkedStreams() {
 	}
 }
 
-func (rt *DashboardRuntime) IsStreamMarked(stream AstraStream) bool {
+func (rt *DashboardRuntime) IsStreamMarked(stream astra.AstraStream) bool {
 	streamID := strings.TrimSpace(stream.ID)
 	if streamID == "" {
 		return false

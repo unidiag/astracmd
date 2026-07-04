@@ -1,4 +1,4 @@
-package main
+package astra
 
 import (
 	"context"
@@ -274,7 +274,7 @@ func BuildStreamsFromScan(
 			channelName = fmt.Sprintf("PNR %d", pnr)
 		}
 
-		streamID := dashboardGenerateStreamID(used)
+		streamID := GenerateStreamID(used)
 
 		stream := AstraStream{
 			ID:     streamID,
@@ -299,8 +299,8 @@ func BuildStreamsFromScan(
 			// Map:       "video=101,audio=102",
 			// FilterNot: "101,102",
 
-			ServiceName:     dashboardStreamServiceName(channelName),
-			ServiceProvider: fmt.Sprintf("%s v.%s", APPNAME, VERSION),
+			ServiceName:     StreamServiceName(channelName),
+			ServiceProvider: "Astra",
 		}
 
 		streams = append(streams, stream)

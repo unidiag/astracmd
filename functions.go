@@ -4,13 +4,13 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"main/internal/astra"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/fatih/color"
@@ -178,50 +178,6 @@ func formatUnixTime(ts int64) string {
 	return time.Unix(ts, 0).Format("02.01.2006 15:04:05")
 }
 
-func isValidLicense(value string) bool {
-	if len([]rune(value)) != 32 {
-		return false
-	}
-
-	for _, r := range value {
-		if r >= '0' && r <= '9' {
-			continue
-		}
-
-		if r >= 'a' && r <= 'f' {
-			continue
-		}
-
-		if r >= 'A' && r <= 'F' {
-			continue
-		}
-
-		return false
-	}
-
-	return true
-}
-
-func formatAdapterCounter(value int) string {
-	if value > 100 {
-		return "99+"
-	}
-
-	return fmt.Sprintf("%d", value)
-}
-
-func normalizeAdapterSignal(value int) int {
-	if value <= 100 {
-		return value
-	}
-
-	if value <= 0 {
-		return 0
-	}
-
-	return 65535 / value
-}
-
 var logChannelNameRe = regexp.MustCompile(`\[([^\]]+)\]`)
 var logInputSuffixRe = regexp.MustCompile(`\s+[io]/\d+$`)
 
@@ -250,16 +206,16 @@ func logItemMatchesStreamName(text string, streamName string) bool {
 	return false
 }
 
-func logItemMatchesStream(text string, stream AstraStream) bool {
+func logItemMatchesStream(text string, stream astra.AstraStream) bool {
 	return logItemMatchesStreamName(text, stream.DisplayName())
 }
 
-func FilterLogItemsByStreams(items []AstraLogItem, streams []AstraStream) []AstraLogItem {
+func FilterLogItemsByStreams(items []astra.AstraLogItem, streams []astra.AstraStream) []astra.AstraLogItem {
 	if len(streams) == 0 {
 		return nil
 	}
 
-	result := make([]AstraLogItem, 0)
+	result := make([]astra.AstraLogItem, 0)
 
 	for _, item := range items {
 		for _, stream := range streams {
@@ -273,8 +229,8 @@ func FilterLogItemsByStreams(items []AstraLogItem, streams []AstraStream) []Astr
 	return result
 }
 
-func FilterLogItemsByStream(items []AstraLogItem, stream AstraStream) []AstraLogItem {
-	result := make([]AstraLogItem, 0)
+func FilterLogItemsByStream(items []astra.AstraLogItem, stream astra.AstraStream) []astra.AstraLogItem {
+	result := make([]astra.AstraLogItem, 0)
 
 	for _, item := range items {
 		if logItemMatchesStream(item.Text, stream) {
@@ -296,7 +252,7 @@ func extractLogBracketValue(text string) string {
 	return strings.TrimSpace(match[1])
 }
 
-func isAdapterLogItem(item AstraLogItem, adapterNumber int) bool {
+func isAdapterLogItem(item astra.AstraLogItem, adapterNumber int) bool {
 	match := logDVBInputRe.FindStringSubmatch(item.Text)
 	if len(match) < 2 {
 		return false
@@ -308,103 +264,6 @@ func isAdapterLogItem(item AstraLogItem, adapterNumber int) bool {
 	}
 
 	return n == adapterNumber
-}
-
-func dashboardStreamServiceName(name string) string {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return ""
-	}
-
-	if dashboardContainsCyrillic(name) {
-		return dashboardTranslitCyrillic(name)
-	}
-
-	return name
-}
-
-func dashboardContainsCyrillic(value string) bool {
-	for _, r := range value {
-		if unicode.In(r, unicode.Cyrillic) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func dashboardTranslitCyrillic(value string) string {
-	replacer := strings.NewReplacer(
-		"А", "A",
-		"Б", "B",
-		"В", "V",
-		"Г", "G",
-		"Д", "D",
-		"Е", "E",
-		"Ё", "Yo",
-		"Ж", "Zh",
-		"З", "Z",
-		"И", "I",
-		"Й", "Y",
-		"К", "K",
-		"Л", "L",
-		"М", "M",
-		"Н", "N",
-		"О", "O",
-		"П", "P",
-		"Р", "R",
-		"С", "S",
-		"Т", "T",
-		"У", "U",
-		"Ф", "F",
-		"Х", "Kh",
-		"Ц", "Ts",
-		"Ч", "Ch",
-		"Ш", "Sh",
-		"Щ", "Sch",
-		"Ъ", "",
-		"Ы", "Y",
-		"Ь", "",
-		"Э", "E",
-		"Ю", "Yu",
-		"Я", "Ya",
-
-		"а", "a",
-		"б", "b",
-		"в", "v",
-		"г", "g",
-		"д", "d",
-		"е", "e",
-		"ё", "yo",
-		"ж", "zh",
-		"з", "z",
-		"и", "i",
-		"й", "y",
-		"к", "k",
-		"л", "l",
-		"м", "m",
-		"н", "n",
-		"о", "o",
-		"п", "p",
-		"р", "r",
-		"с", "s",
-		"т", "t",
-		"у", "u",
-		"ф", "f",
-		"х", "kh",
-		"ц", "ts",
-		"ч", "ch",
-		"ш", "sh",
-		"щ", "sch",
-		"ъ", "",
-		"ы", "y",
-		"ь", "",
-		"э", "e",
-		"ю", "yu",
-		"я", "ya",
-	)
-
-	return replacer.Replace(value)
 }
 
 func runTUI(cfg *Config) {

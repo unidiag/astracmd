@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"main/internal/astra"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,16 +13,6 @@ import (
 
 const DefaultConfigPath = "/etc/astra/astracmd.ini"
 
-type AstraConnection struct {
-	ID        string
-	Name      string
-	Login     string
-	Password  string
-	Interface string
-	Port      int
-	Debug     bool
-}
-
 type GlobalConfig struct {
 	ServiceProvider string
 }
@@ -29,33 +20,7 @@ type GlobalConfig struct {
 type Config struct {
 	Path        string
 	Global      GlobalConfig
-	Connections []AstraConnection
-}
-
-func (c AstraConnection) Addr() string {
-	return fmt.Sprintf("%s:%d", c.Interface, c.Port)
-}
-
-func (c AstraConnection) DSN() string {
-	return fmt.Sprintf("%s:%s@%s:%d", c.Login, c.Password, c.Interface, c.Port)
-}
-
-func (c AstraConnection) DisplayDSN() string {
-	return "<" + c.DSN() + ">"
-}
-
-func (c AstraConnection) MaskedDSN() string {
-	return fmt.Sprintf(
-		"%s:%s@%s:%d",
-		c.Login,
-		maskString(c.Password),
-		c.Interface,
-		c.Port,
-	)
-}
-
-func (c AstraConnection) DisplayMaskedDSN() string {
-	return "<" + c.MaskedDSN() + ">"
+	Connections []astra.AstraConnection
 }
 
 func maskString(value string) string {
@@ -124,7 +89,7 @@ service_provider = %s
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
-func readConnections(path string) ([]AstraConnection, error) {
+func readConnections(path string) ([]astra.AstraConnection, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -191,7 +156,7 @@ func readConnections(path string) ([]AstraConnection, error) {
 		return nil, err
 	}
 
-	connections := make([]AstraConnection, 0, len(order))
+	connections := make([]astra.AstraConnection, 0, len(order))
 
 	for _, id := range order {
 		sec := sections[id]
@@ -199,7 +164,7 @@ func readConnections(path string) ([]AstraConnection, error) {
 		port, _ := strconv.Atoi(strings.TrimSpace(sec["port"]))
 		debug, _ := strconv.ParseBool(strings.TrimSpace(sec["debug"]))
 
-		conn := AstraConnection{
+		conn := astra.AstraConnection{
 			ID:        id,
 			Name:      strings.TrimSpace(sec["name"]),
 			Login:     strings.TrimSpace(sec["login"]),
@@ -312,7 +277,7 @@ func (cfg *Config) nextIDWithUsed(used map[string]bool) string {
 	}
 }
 
-func (cfg *Config) UpsertConnection(conn AstraConnection) {
+func (cfg *Config) UpsertConnection(conn astra.AstraConnection) {
 	if conn.ID == "" {
 		conn.ID = cfg.NextID()
 	}
@@ -416,7 +381,7 @@ func readConfig(path string) (*Config, error) {
 		Global: GlobalConfig{
 			ServiceProvider: strings.TrimSpace(global["service_provider"]),
 		},
-		Connections: make([]AstraConnection, 0, len(order)),
+		Connections: make([]astra.AstraConnection, 0, len(order)),
 	}
 
 	for _, id := range order {
@@ -425,7 +390,7 @@ func readConfig(path string) (*Config, error) {
 		port, _ := strconv.Atoi(strings.TrimSpace(sec["port"]))
 		debug, _ := strconv.ParseBool(strings.TrimSpace(sec["debug"]))
 
-		conn := AstraConnection{
+		conn := astra.AstraConnection{
 			ID:        id,
 			Name:      strings.TrimSpace(sec["name"]),
 			Login:     strings.TrimSpace(sec["login"]),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"main/internal/astra"
 	"strings"
 	"time"
 
@@ -12,10 +13,10 @@ import (
 )
 
 func (ui *UI) ShowAdapterAnalyzerDialog(
-	conn AstraConnection,
-	adapter AstraAdapter,
-	existingStreams []AstraStream,
-	onScanOK func(AstraAdapter, int),
+	conn astra.AstraConnection,
+	adapter astra.AstraAdapter,
+	existingStreams []astra.AstraStream,
+	onScanOK func(astra.AstraAdapter, int),
 	onError func(error),
 ) {
 	adapterID := strings.TrimSpace(adapter.ID)
@@ -24,7 +25,7 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 		return
 	}
 
-	knownStreams := append([]AstraStream(nil), existingStreams...)
+	knownStreams := append([]astra.AstraStream(nil), existingStreams...)
 	scanInProgress := false
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -87,7 +88,7 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 		scanDelay := 3 * time.Second
 
 		go func() {
-			result := AstraScanAddStreams(
+			result := astra.AstraScanAddStreams(
 				context.Background(),
 				conn,
 				parsed,
@@ -167,14 +168,14 @@ func (ui *UI) ShowAdapterAnalyzerDialog(
 
 func (ui *UI) runAdapterAnalyzer(
 	ctx context.Context,
-	conn AstraConnection,
-	adapter AstraAdapter,
+	conn astra.AstraConnection,
+	adapter astra.AstraAdapter,
 	status *tview.TextView,
 	table *tview.Table,
 	statusFlags *tview.TextView,
 	bars *adapterAnalyzerBarsView,
 ) {
-	ws, err := AstraConnectWebSocket(ctx, conn)
+	ws, err := astra.AstraConnectWebSocket(ctx, conn)
 	if err != nil {
 		ui.app.QueueUpdateDraw(func() {
 			status.SetText("[red]WebSocket error[-]")
@@ -189,7 +190,7 @@ func (ui *UI) runAdapterAnalyzer(
 		status.SetText("[green]WebSocket connected[-]")
 	})
 
-	messages := make(chan AstraWSMessage, 32)
+	messages := make(chan astra.AstraWSMessage, 32)
 	go ws.ReadLoop(ctx, messages)
 
 	adapterID := strings.TrimSpace(adapter.ID)
@@ -203,7 +204,7 @@ func (ui *UI) runAdapterAnalyzer(
 			return
 		}
 
-		var envelope AstraWSEnvelope
+		var envelope astra.AstraWSEnvelope
 		if err := json.Unmarshal(msg.Raw, &envelope); err != nil {
 			continue
 		}
@@ -212,7 +213,7 @@ func (ui *UI) runAdapterAnalyzer(
 			continue
 		}
 
-		var event AstraWSAdapterEvent
+		var event astra.AstraWSAdapterEvent
 		if err := json.Unmarshal(msg.Raw, &event); err != nil {
 			continue
 		}
@@ -221,7 +222,7 @@ func (ui *UI) runAdapterAnalyzer(
 			continue
 		}
 
-		state := AstraAdapterState{
+		state := astra.AstraAdapterState{
 			Signal:   event.Signal,
 			SignalDB: event.SignalDB,
 			Bitrate:  event.Bitrate,
@@ -241,7 +242,7 @@ func (ui *UI) runAdapterAnalyzer(
 	}
 }
 
-func formatAdapterAnalyzerStatus(adapterID string, state AstraAdapterState) string {
+func formatAdapterAnalyzerStatus(adapterID string, state astra.AstraAdapterState) string {
 	statusColor := "green"
 	if state.Bitrate <= 0 || state.Signal <= 0 || state.SNR <= 0 {
 		statusColor = "red"
@@ -284,7 +285,7 @@ func setAdapterAnalyzerError(table *tview.Table, err error) {
 		SetExpansion(1))
 }
 
-func setAdapterAnalyzerTable(table *tview.Table, state AstraAdapterState) {
+func setAdapterAnalyzerTable(table *tview.Table, state astra.AstraAdapterState) {
 	table.Clear()
 
 	rows := []struct {
@@ -299,7 +300,7 @@ func setAdapterAnalyzerTable(table *tview.Table, state AstraAdapterState) {
 		},
 		{
 			Name:  "BER / UNC",
-			Value: fmt.Sprintf("%s / %s", formatAdapterCounter(state.BER), formatAdapterCounter(state.UNC)),
+			Value: fmt.Sprintf("%s / %s", astra.FormatAdapterCounter(state.BER), astra.FormatAdapterCounter(state.UNC)),
 			Color: adapterAnalyzerErrorColor(state.BER, state.UNC),
 		},
 	}
@@ -326,8 +327,8 @@ func adapterAnalyzerBitrateColor(bitrate int) tcell.Color {
 }
 
 func adapterAnalyzerSignalColor(signal int, snr int) tcell.Color {
-	signal = normalizeAdapterSignal(signal)
-	snr = normalizeAdapterSignal(snr)
+	signal = astra.NormalizeAdapterSignal(signal)
+	snr = astra.NormalizeAdapterSignal(snr)
 
 	if signal <= 0 || snr <= 0 {
 		return tcell.ColorRed
@@ -362,7 +363,7 @@ func formatAdapterAnalyzerDB(value int) string {
 
 type adapterAnalyzerBarsView struct {
 	*tview.Box
-	state AstraAdapterState
+	state astra.AstraAdapterState
 }
 
 func newAdapterAnalyzerBarsView() *adapterAnalyzerBarsView {
@@ -371,7 +372,7 @@ func newAdapterAnalyzerBarsView() *adapterAnalyzerBarsView {
 	}
 }
 
-func (v *adapterAnalyzerBarsView) SetState(state AstraAdapterState) {
+func (v *adapterAnalyzerBarsView) SetState(state astra.AstraAdapterState) {
 	v.state = state
 }
 
@@ -392,13 +393,13 @@ func (v *adapterAnalyzerBarsView) Draw(screen tcell.Screen) {
 	}{
 		{
 			Label:   "Signal",
-			Value:   fmt.Sprintf("%d%%", normalizeAdapterSignal(state.Signal)),
-			Percent: normalizeAdapterSignal(state.Signal),
+			Value:   fmt.Sprintf("%d%%", astra.NormalizeAdapterSignal(state.Signal)),
+			Percent: astra.NormalizeAdapterSignal(state.Signal),
 		},
 		{
 			Label:   "SNR",
-			Value:   fmt.Sprintf("%d%%", normalizeAdapterSignal(state.SNR)),
-			Percent: normalizeAdapterSignal(state.SNR),
+			Value:   fmt.Sprintf("%d%%", astra.NormalizeAdapterSignal(state.SNR)),
+			Percent: astra.NormalizeAdapterSignal(state.SNR),
 		},
 		{
 			Label:   "Signal dB",

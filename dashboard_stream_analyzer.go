@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"main/internal/astra"
 	"sort"
 	"strings"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) ShowStreamAnalyzerDialog(conn AstraConnection, stream AstraStream) {
+func (ui *UI) ShowStreamAnalyzerDialog(conn astra.AstraConnection, stream astra.AstraStream) {
 	streamID := strings.TrimSpace(stream.ID)
 	if streamID == "" {
 		ui.ShowError("Stream ID is empty", nil)
@@ -74,12 +75,12 @@ func (ui *UI) ShowStreamAnalyzerDialog(conn AstraConnection, stream AstraStream)
 
 func (ui *UI) runStreamAnalyzer(
 	ctx context.Context,
-	conn AstraConnection,
-	stream AstraStream,
+	conn astra.AstraConnection,
+	stream astra.AstraStream,
 	status *tview.TextView,
 	table *tview.Table,
 ) {
-	ws, wsID, err := AstraConnectWebSocketWithID(ctx, conn)
+	ws, wsID, err := astra.AstraConnectWebSocketWithID(ctx, conn)
 	if err != nil {
 		ui.app.QueueUpdateDraw(func() {
 			status.SetText("[red]WebSocket error[-]")
@@ -90,7 +91,7 @@ func (ui *UI) runStreamAnalyzer(
 
 	defer ws.Close()
 
-	initResult := AstraStreamScanInit(ctx, conn, stream.ID, wsID)
+	initResult := astra.AstraStreamScanInit(ctx, conn, stream.ID, wsID)
 	if !initResult.OK {
 		ui.app.QueueUpdateDraw(func() {
 			status.SetText("[red]scan-init failed[-]")
@@ -107,7 +108,7 @@ func (ui *UI) runStreamAnalyzer(
 		))
 	})
 
-	messages := make(chan AstraWSMessage, 32)
+	messages := make(chan astra.AstraWSMessage, 32)
 	go ws.ReadLoop(ctx, messages)
 
 	var emptyFrames int
@@ -123,7 +124,7 @@ func (ui *UI) runStreamAnalyzer(
 			return
 		}
 
-		var envelope AstraWSEnvelope
+		var envelope astra.AstraWSEnvelope
 		if err := json.Unmarshal(msg.Raw, &envelope); err != nil {
 			continue
 		}
@@ -132,7 +133,7 @@ func (ui *UI) runStreamAnalyzer(
 			continue
 		}
 
-		var totalEvent AstraStreamScanEvent
+		var totalEvent astra.AstraStreamScanEvent
 		if err := json.Unmarshal(msg.Raw, &totalEvent); err == nil {
 			total := totalEvent.Data.Total
 
@@ -166,7 +167,7 @@ func (ui *UI) runStreamAnalyzer(
 			}
 		}
 
-		var psiEvent AstraStreamScanPSIEvent
+		var psiEvent astra.AstraStreamScanPSIEvent
 		if err := json.Unmarshal(msg.Raw, &psiEvent); err != nil {
 			continue
 		}
@@ -189,12 +190,12 @@ const streamScanEmptyFramesBeforeReset = 100
 
 type streamAnalyzerState struct {
 	HasTotal bool
-	Total    AstraStreamScanTotal
+	Total    astra.AstraStreamScanTotal
 	OnAir    bool
 
-	PAT *AstraStreamScanPSIData
-	PMT *AstraStreamScanPSIData
-	SDT *AstraStreamScanPSIData
+	PAT *astra.AstraStreamScanPSIData
+	PMT *astra.AstraStreamScanPSIData
+	SDT *astra.AstraStreamScanPSIData
 
 	EPG []streamAnalyzerEPGItem
 }
@@ -207,7 +208,7 @@ type streamAnalyzerEPGItem struct {
 	Lang    string
 }
 
-func (s *streamAnalyzerState) ApplyPSI(data AstraStreamScanPSIData) {
+func (s *streamAnalyzerState) ApplyPSI(data astra.AstraStreamScanPSIData) {
 	switch strings.ToLower(strings.TrimSpace(data.PSI)) {
 	case "pat":
 		s.PAT = &data
@@ -223,7 +224,7 @@ func (s *streamAnalyzerState) ApplyPSI(data AstraStreamScanPSIData) {
 	}
 }
 
-func (s *streamAnalyzerState) applyEIT(data AstraStreamScanPSIData) {
+func (s *streamAnalyzerState) applyEIT(data astra.AstraStreamScanPSIData) {
 	if len(data.Events) == 0 {
 		return
 	}
@@ -280,7 +281,7 @@ func (s *streamAnalyzerState) applyEIT(data AstraStreamScanPSIData) {
 	}
 }
 
-func isEmptyStreamScanTotal(total AstraStreamScanTotal) bool {
+func isEmptyStreamScanTotal(total astra.AstraStreamScanTotal) bool {
 	return total.BitrateLimit == 0 &&
 		total.CCErrors == 0 &&
 		total.PESErrors == 0 &&
@@ -353,7 +354,7 @@ func setScanAnalyzerTable(table *tview.Table, state streamAnalyzerState) {
 	}
 }
 
-func addScanTotalRows(table *tview.Table, row int, total AstraStreamScanTotal) int {
+func addScanTotalRows(table *tview.Table, row int, total astra.AstraStreamScanTotal) int {
 	rows := []struct {
 		Name  string
 		Value string
@@ -387,7 +388,7 @@ func addScanTotalRows(table *tview.Table, row int, total AstraStreamScanTotal) i
 	return row
 }
 
-func addPATRows(table *tview.Table, row int, data AstraStreamScanPSIData) int {
+func addPATRows(table *tview.Table, row int, data astra.AstraStreamScanPSIData) int {
 	table.SetCell(row, 0, tview.NewTableCell(fmt.Sprintf(" PAT TSID:%d", data.TSID)).
 		SetTextColor(tcell.ColorLightCyan).
 		SetAttributes(tcell.AttrBold).
@@ -404,7 +405,7 @@ func addPATRows(table *tview.Table, row int, data AstraStreamScanPSIData) int {
 	return row
 }
 
-func addPMTRows(table *tview.Table, row int, data AstraStreamScanPSIData) int {
+func addPMTRows(table *tview.Table, row int, data astra.AstraStreamScanPSIData) int {
 	items := getPMTItems(data)
 
 	title := fmt.Sprintf(" PMT PNR:%d", data.PNR)
@@ -431,7 +432,7 @@ func addPMTRows(table *tview.Table, row int, data AstraStreamScanPSIData) int {
 	return row
 }
 
-func addSDTRows(table *tview.Table, row int, data AstraStreamScanPSIData) int {
+func addSDTRows(table *tview.Table, row int, data astra.AstraStreamScanPSIData) int {
 	table.SetCell(row, 0, tview.NewTableCell(fmt.Sprintf(" SDT TSID:%d", data.TSID)).
 		SetTextColor(tcell.ColorLightCyan).
 		SetAttributes(tcell.AttrBold).
@@ -503,7 +504,7 @@ func scanValueColor(ok bool) tcell.Color {
 	return tcell.ColorRed
 }
 
-func formatPMTItem(item AstraStreamScanPMTItem) string {
+func formatPMTItem(item astra.AstraStreamScanPMTItem) string {
 	kind := formatPMTType(item.TypeName, item.TypeID)
 	lang := getPMTItemLang(item)
 
@@ -573,7 +574,7 @@ func truncateScanText(s string, limit int) string {
 	return string(runes[:limit]) + "..."
 }
 
-func getPMTItemLang(item AstraStreamScanPMTItem) string {
+func getPMTItemLang(item astra.AstraStreamScanPMTItem) string {
 	for _, desc := range item.Descriptors {
 		lang := strings.TrimSpace(desc.Lang)
 		if lang != "" {
@@ -589,7 +590,7 @@ func getPMTItemLang(item AstraStreamScanPMTItem) string {
 	return ""
 }
 
-func getPMTItems(data AstraStreamScanPSIData) []AstraStreamScanPMTItem {
+func getPMTItems(data astra.AstraStreamScanPSIData) []astra.AstraStreamScanPMTItem {
 	if len(data.PMT) > 0 {
 		return data.PMT
 	}
@@ -605,7 +606,7 @@ func getPMTItems(data AstraStreamScanPSIData) []AstraStreamScanPMTItem {
 	return nil
 }
 
-func formatBitratePackets(total AstraStreamScanTotal) string {
+func formatBitratePackets(total astra.AstraStreamScanTotal) string {
 	bitrateColor := "green"
 	if total.Bitrate <= 0 {
 		bitrateColor = "red"

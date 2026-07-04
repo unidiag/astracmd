@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+	"main/internal/astra"
 )
 
 func dashboardLoadLogAsync(
 	ctx context.Context,
-	conn AstraConnection,
+	conn astra.AstraConnection,
 	queueUpdate func(func()),
-	onLoaded func([]AstraLogItem),
+	onLoaded func([]astra.AstraLogItem),
 	onError func(error),
 ) {
 	go func() {
-		result := AstraLog(ctx, conn)
+		result := astra.AstraLog(ctx, conn)
 
 		queueUpdate(func() {
 			if !result.OK {
@@ -36,14 +37,14 @@ func dashboardLoadLogAsync(
 
 func dashboardSetDebugLogAsync(
 	ctx context.Context,
-	conn AstraConnection,
+	conn astra.AstraConnection,
 	enabled bool,
 	queueUpdate func(func()),
 	onSaved func(bool),
 	onError func(error),
 ) {
 	go func() {
-		result := AstraSetLog(ctx, conn, enabled)
+		result := astra.AstraSetLog(ctx, conn, enabled)
 
 		queueUpdate(func() {
 			if !result.OK {

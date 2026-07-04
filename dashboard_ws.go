@@ -3,19 +3,20 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"main/internal/astra"
 	"strings"
 	"time"
 )
 
 type DashboardWebSocketHandlers struct {
-	OnLogItems     func(items []AstraLogItem)
-	OnAdapterState func(adapterID string, state AstraAdapterState)
-	OnStreamState  func(streamID string, state AstraStreamState)
+	OnLogItems     func(items []astra.AstraLogItem)
+	OnAdapterState func(adapterID string, state astra.AstraAdapterState)
+	OnStreamState  func(streamID string, state astra.AstraStreamState)
 }
 
 func dashboardStartAstraWebSocket(
 	ctx context.Context,
-	conn AstraConnection,
+	conn astra.AstraConnection,
 	queueUpdate func(func()),
 	handlers DashboardWebSocketHandlers,
 ) {
@@ -36,7 +37,7 @@ func dashboardStartAstraWebSocket(
 			default:
 			}
 
-			client, err := AstraConnectWebSocket(ctx, conn)
+			client, err := astra.AstraConnectWebSocket(ctx, conn)
 			if err != nil {
 				dashboardQueueWebSocketError(queueUpdate, handlers, err)
 
@@ -48,7 +49,7 @@ func dashboardStartAstraWebSocket(
 				}
 			}
 
-			messages := make(chan AstraWSMessage)
+			messages := make(chan astra.AstraWSMessage)
 			go client.ReadLoop(ctx, messages)
 
 			for msg := range messages {
@@ -57,7 +58,7 @@ func dashboardStartAstraWebSocket(
 					break
 				}
 
-				var envelope AstraWSEnvelope
+				var envelope astra.AstraWSEnvelope
 				if err := json.Unmarshal(msg.Raw, &envelope); err != nil {
 					continue
 				}
@@ -101,7 +102,7 @@ func dashboardQueueWebSocketError(
 		return
 	}
 
-	item := AstraLogItem{
+	item := astra.AstraLogItem{
 		ID:   time.Now().UnixNano(),
 		Time: time.Now().Unix(),
 		Type: 2,
@@ -109,7 +110,7 @@ func dashboardQueueWebSocketError(
 	}
 
 	queueUpdate(func() {
-		handlers.OnLogItems([]AstraLogItem{item})
+		handlers.OnLogItems([]astra.AstraLogItem{item})
 	})
 }
 
@@ -122,7 +123,7 @@ func dashboardHandleWebSocketLogEvent(
 		return
 	}
 
-	var event AstraWSLogEvent
+	var event astra.AstraWSLogEvent
 	if err := json.Unmarshal(raw, &event); err != nil {
 		return
 	}
@@ -141,7 +142,7 @@ func dashboardHandleWebSocketAdapterEvent(
 		return
 	}
 
-	var event AstraWSAdapterEvent
+	var event astra.AstraWSAdapterEvent
 	if err := json.Unmarshal(raw, &event); err != nil {
 		return
 	}
@@ -151,7 +152,7 @@ func dashboardHandleWebSocketAdapterEvent(
 		return
 	}
 
-	state := AstraAdapterState{
+	state := astra.AstraAdapterState{
 		Signal:   event.Signal,
 		SignalDB: event.SignalDB,
 		Bitrate:  event.Bitrate,
@@ -176,7 +177,7 @@ func dashboardHandleWebSocketStreamEvent(
 		return
 	}
 
-	var event AstraWSStreamEvent
+	var event astra.AstraWSStreamEvent
 	if err := json.Unmarshal(raw, &event); err != nil {
 		return
 	}
@@ -186,7 +187,7 @@ func dashboardHandleWebSocketStreamEvent(
 		return
 	}
 
-	state := AstraStreamState{
+	state := astra.AstraStreamState{
 		Bitrate:   event.Bitrate,
 		Onair:     event.Onair,
 		CCError:   event.CCError,

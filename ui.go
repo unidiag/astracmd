@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"main/internal/astra"
 	"strconv"
 	"strings"
 
@@ -167,12 +168,12 @@ func (ui *UI) ShowConnections() {
 	ui.app.SetFocus(table)
 }
 
-func (ui *UI) ShowConnectionForm(editConn *AstraConnection) {
+func (ui *UI) ShowConnectionForm(editConn *astra.AstraConnection) {
 	ui.pages.RemovePage(pageDialog)
 
 	isEdit := editConn != nil
 
-	conn := AstraConnection{
+	conn := astra.AstraConnection{
 		Login:     "admin",
 		Interface: "127.0.0.1",
 		Port:      8000,
@@ -272,7 +273,7 @@ func onlyPortInput(text string, _ rune) bool {
 	return port >= 0 && port <= 65535
 }
 
-func validateConnection(conn AstraConnection) error {
+func validateConnection(conn astra.AstraConnection) error {
 	if strings.TrimSpace(conn.Name) == "" {
 		return fmt.Errorf("connection name is required")
 	}
@@ -292,7 +293,7 @@ func validateConnection(conn AstraConnection) error {
 	return nil
 }
 
-func (ui *UI) ConfirmDelete(conn AstraConnection) {
+func (ui *UI) ConfirmDelete(conn astra.AstraConnection) {
 	modal := tview.NewModal()
 	modal.SetText(fmt.Sprintf("Delete connection?\n\n%s\n%s", conn.Name, conn.DisplayMaskedDSN()))
 	modal.AddButtons([]string{"Delete", "Cancel"})

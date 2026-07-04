@@ -1,6 +1,7 @@
 package main
 
 import (
+	"main/internal/astra"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -9,7 +10,7 @@ import (
 
 func dashboardGetSelectedAdapterID(
 	adaptersTable *tview.Table,
-	adapters []AstraAdapter,
+	adapters []astra.AstraAdapter,
 ) string {
 	row, _ := adaptersTable.GetSelection()
 
@@ -31,16 +32,16 @@ func dashboardGetSelectedAdapterID(
 
 func dashboardGetSelectedAdapter(
 	adaptersTable *tview.Table,
-	adapters []AstraAdapter,
-) (AstraAdapter, bool) {
+	adapters []astra.AstraAdapter,
+) (astra.AstraAdapter, bool) {
 	row, _ := adaptersTable.GetSelection()
 	if row < 2 {
-		return AstraAdapter{}, false
+		return astra.AstraAdapter{}, false
 	}
 
 	adapterIndex := (row - 2) / 2
 	if adapterIndex < 0 || adapterIndex >= len(adapters) {
-		return AstraAdapter{}, false
+		return astra.AstraAdapter{}, false
 	}
 
 	return adapters[adapterIndex], true
@@ -48,8 +49,8 @@ func dashboardGetSelectedAdapter(
 
 func dashboardRenderAdapters(
 	adaptersTable *tview.Table,
-	adapters []AstraAdapter,
-	adapterStates map[string]AstraAdapterState,
+	adapters []astra.AstraAdapter,
+	adapterStates map[string]astra.AstraAdapterState,
 	dimmed bool,
 ) {
 	FillAdaptersTable(adaptersTable, adapters, adapterStates, dimmed)
@@ -64,25 +65,25 @@ func dashboardRenderAdapters(
 
 func dashboardBuildVisibleStreams(
 	adapterID string,
-	config AstraConfig,
-	streamMap map[string][]AstraStream,
-) []AstraStream {
+	config astra.AstraConfig,
+	streamMap map[string][]astra.AstraStream,
+) []astra.AstraStream {
 	switch adapterID {
 	case dashboardAdapterAll:
-		return append([]AstraStream(nil), config.Streams...)
+		return append([]astra.AstraStream(nil), config.Streams...)
 
 	case dashboardAdapterOutside:
-		return append([]AstraStream(nil), streamMap[""]...)
+		return append([]astra.AstraStream(nil), streamMap[""]...)
 
 	default:
-		return append([]AstraStream(nil), streamMap[adapterID]...)
+		return append([]astra.AstraStream(nil), streamMap[adapterID]...)
 	}
 }
 
 func dashboardRenderStreams(
 	table *tview.Table,
-	streams []AstraStream,
-	states map[string]AstraStreamState,
+	streams []astra.AstraStream,
+	states map[string]astra.AstraStreamState,
 	selectedStreamIDs map[string]bool,
 	dimmed bool,
 ) {
@@ -128,15 +129,15 @@ func dashboardRenderStreams(
 
 func dashboardGetSelectedStream(
 	streamsTable *tview.Table,
-	visibleStreams []AstraStream,
-) (AstraStream, bool) {
+	visibleStreams []astra.AstraStream,
+) (astra.AstraStream, bool) {
 	if len(visibleStreams) == 0 {
-		return AstraStream{}, false
+		return astra.AstraStream{}, false
 	}
 
 	row, _ := streamsTable.GetSelection()
 	if row < 0 || row >= len(visibleStreams) {
-		return AstraStream{}, false
+		return astra.AstraStream{}, false
 	}
 
 	return visibleStreams[row], true
@@ -144,14 +145,14 @@ func dashboardGetSelectedStream(
 
 func dashboardGetFilteredLogItems(
 	activePane int,
-	currentLogItems []AstraLogItem,
+	currentLogItems []astra.AstraLogItem,
 	selectedAdapterID string,
-	selectedAdapter AstraAdapter,
+	selectedAdapter astra.AstraAdapter,
 	hasSelectedAdapter bool,
-	selectedStream AstraStream,
+	selectedStream astra.AstraStream,
 	hasSelectedStream bool,
-	streamMap map[string][]AstraStream,
-) []AstraLogItem {
+	streamMap map[string][]astra.AstraStream,
+) []astra.AstraLogItem {
 	if activePane == dashboardPaneStreams {
 		if hasSelectedStream {
 			return FilterLogItemsByStream(currentLogItems, selectedStream)
@@ -182,7 +183,7 @@ func dashboardGetFilteredLogItems(
 
 func dashboardRenderLog(
 	logTable *tview.Table,
-	items []AstraLogItem,
+	items []astra.AstraLogItem,
 	dimmed bool,
 ) {
 	FillLogTable(logTable, items, dimmed, dashboardGetLogMaxRows(logTable))

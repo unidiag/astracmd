@@ -1,4 +1,4 @@
-package main
+package astra
 
 import (
 	"context"
@@ -88,31 +88,13 @@ func AstraTestSoftcam(
 
 	responseBody, err := astraControlRequest(ctx, conn, body)
 	if err != nil {
-		debugSave(map[string]any{
-			"action":  "test-softcam",
-			"request": string(body),
-			"error":   err.Error(),
-		})
-
 		return AstraTestSoftcamResult{OK: false, Err: err}
 	}
 
 	var response astraTestSoftcamResponse
 	if err := json.Unmarshal(responseBody, &response); err != nil {
-		debugSave(map[string]any{
-			"action":   "test-softcam",
-			"request":  string(body),
-			"response": string(responseBody),
-			"error":    err.Error(),
-		})
-
 		return AstraTestSoftcamResult{OK: false, Err: err}
 	}
-
-	debugSave(map[string]any{
-		"request":      string(body),
-		"response_raw": string(responseBody),
-	})
 
 	if response.Status == 0 {
 		errorMsg := strings.TrimSpace(response.Error)

@@ -1,6 +1,10 @@
 package main
 
-import "github.com/rivo/tview"
+import (
+	"main/internal/astra"
+
+	"github.com/rivo/tview"
+)
 
 func dashboardAdapterLogicalIndex(row int) int {
 	switch {
@@ -31,7 +35,7 @@ func dashboardAdapterRowFromLogicalIndex(logicalIndex int) int {
 
 func dashboardMoveAdapterSelection(
 	adaptersTable *tview.Table,
-	adapters []AstraAdapter,
+	adapters []astra.AstraAdapter,
 	delta int,
 ) {
 	row, _ := adaptersTable.GetSelection()
@@ -55,7 +59,7 @@ func dashboardMoveAdapterSelection(
 
 func dashboardNormalizeAdapterSelectionRow(
 	adaptersTable *tview.Table,
-	adapters []AstraAdapter,
+	adapters []astra.AstraAdapter,
 	row int,
 ) bool {
 	maxRow := len(adapters)*2 + 1
