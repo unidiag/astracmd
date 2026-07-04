@@ -3,11 +3,13 @@ package dashboard
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"main/internal/astra"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -765,4 +767,15 @@ func Show(opt Options) {
 			},
 		},
 	)
+}
+
+func debugSave(opt Options, some any) {
+	if !opt.Debug {
+		return
+	}
+
+	text := "DEBUG " + time.Now().Format("2006-01-02 15:04:05") + "\n\n"
+	text += spew.Sdump(some)
+
+	_ = os.WriteFile("debug.txt", []byte(text), 0644)
 }

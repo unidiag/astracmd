@@ -69,6 +69,8 @@ type Adapter struct {
 	Bandwidth    string `json:"bandwidth"`
 	Hierarchy    string `json:"hierarchy"`
 	Modulation   string `json:"modulation"`
+	DiseqcMode   string `json:"diseqc_mode,omitempty"` // "cmd"
+	Diseqc       string `json:"diseqc,omitempty"`      // "t W50 [E0 31 6E E3 13] W30 T"  75 deg
 	Lof1         string `json:"lof1"`
 	Lof2         string `json:"lof2"`
 	Slof         string `json:"slof"`

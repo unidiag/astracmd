@@ -40,6 +40,7 @@ type Options struct {
 	Pages      *tview.Pages
 	Connection astra.Connection
 	Config     ConfigStore
+	Debug      bool
 
 	SetMain func(root tview.Primitive)
 

@@ -145,6 +145,8 @@ func (ui *UI) dashboardOptions(conn astra.Connection) dashboard.Options {
 			cfg: ui.cfg,
 		},
 
+		Debug: debug,
+
 		SetMain: ui.setMain,
 
 		ShowError:       ui.ShowError,

@@ -69,6 +69,8 @@ type astraScanAdapterPayload struct {
 	Lof1         string `json:"lof1,omitempty"`
 	Lof2         string `json:"lof2,omitempty"`
 	Slof         string `json:"slof,omitempty"`
+	DiseqcMode   string `json:"diseqc_mode,omitempty"`
+	Diseqc       string `json:"diseqc,omitempty"`
 	Enable       bool   `json:"enable"`
 	Format       string `json:"format"`
 }
