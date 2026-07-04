@@ -237,7 +237,7 @@ func BuildStreamsFromScan(
 	serviceProvider string,
 ) []Stream {
 	serviceNames := make(map[int]string)
-	videoPNRs := make(map[int]bool)
+	mediaPNRs := make(map[int]bool)
 	existingPNRs := existingStreamPNRsByAdapter(adapter.ID, existingStreams)
 
 	for _, table := range tables {
@@ -251,14 +251,14 @@ func BuildStreamsFromScan(
 			}
 
 		case "pmt":
-			if table.PNR > 0 && astraScanHasVideo(table.Streams) {
-				videoPNRs[table.PNR] = true
+			if table.PNR > 0 && astraScanHasPlayableMedia(table.Streams) {
+				mediaPNRs[table.PNR] = true
 			}
 		}
 	}
 
-	pnrs := make([]int, 0, len(videoPNRs))
-	for pnr := range videoPNRs {
+	pnrs := make([]int, 0, len(mediaPNRs))
+	for pnr := range mediaPNRs {
 		pnrs = append(pnrs, pnr)
 	}
 
@@ -327,16 +327,20 @@ func astraScanServiceName(service astraScanService) string {
 	return ""
 }
 
-func astraScanHasVideo(streams []astraScanESStream) bool {
+func astraScanHasPlayableMedia(streams []astraScanESStream) bool {
 	for _, stream := range streams {
 		typeName := strings.ToUpper(strings.TrimSpace(stream.TypeName))
-
-		if typeName == "VIDEO" {
+		if typeName == "VIDEO" || typeName == "AUDIO" {
 			return true
 		}
 
 		switch stream.TypeID {
+		// MPEG-1 video, MPEG-2 video, MPEG-4 video, H.264/AVC, H.265/HEVC
 		case 1, 2, 16, 27, 36:
+			return true
+
+		// MPEG-1 audio, MPEG-2 audio, AAC, LATM AAC, AC-3, E-AC-3, DTS
+		case 3, 4, 15, 17, 129, 135, 138:
 			return true
 		}
 	}
