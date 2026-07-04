@@ -113,6 +113,7 @@ func readTailLines(path string, maxBytes int64, maxLines int) (string, error) {
 	text := string(data[:n])
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	text = strings.ReplaceAll(text, "\r", "\n")
+	text = strings.ReplaceAll(text, "\t", " ")
 	text = strings.TrimRight(text, "\n")
 
 	if text == "" {
@@ -129,5 +130,14 @@ func readTailLines(path string, maxBytes int64, maxLines int) (string, error) {
 		lines = lines[len(lines)-maxLines:]
 	}
 
+	for i := range lines {
+		lines[i] = cleanLogLine(lines[i])
+	}
+
 	return strings.Join(lines, "\n"), nil
+}
+
+func cleanLogLine(line string) string {
+	line = strings.ReplaceAll(line, "\t", " ")
+	return strings.Join(strings.Fields(line), " ")
 }
