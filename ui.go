@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"main/internal/astra"
+	"main/internal/dashboard"
 	"strconv"
 	"strings"
 
@@ -55,7 +56,15 @@ func (ui *UI) HandleGlobalKeys(event *tcell.EventKey) bool {
 	return false
 }
 
+func (ui *UI) ShowRestrictedConnectionsError(returnFocus tview.Primitive) {
+	ui.ShowError(
+		"Restricted mode: run astracmd as root to change connections",
+		returnFocus,
+	)
+}
+
 func (ui *UI) ShowConnections() {
+	accessMode := dashboard.AccessModeLabel()
 	ui.StopDashboardTimer()
 
 	ui.pages.RemovePage(pageDialog)
@@ -64,9 +73,10 @@ func (ui *UI) ShowConnections() {
 	title.SetDynamicColors(true)
 	title.SetTextAlign(tview.AlignCenter)
 	title.SetText(fmt.Sprintf(
-		"[::b]%s[::-] v%s\n[gray]BUILD: %s[-]\n[gray]CONFIG: %s[-]",
+		"[::b]%s[::-] v%s (%s)\n[gray]BUILD: %s[-]\n[gray]CONFIG: %s[-]",
 		APPNAMEFULL,
 		VERSION,
+		accessMode,
 		BUILD,
 		ui.cfg.Path,
 	))
@@ -94,19 +104,21 @@ func (ui *UI) ShowConnections() {
 		table.SetCell(i, 1, dsnCell)
 	}
 
-	newRow := len(ui.cfg.Connections)
+	if dashboard.CanChangeConnections() {
+		newRow := len(ui.cfg.Connections)
 
-	newCell := tview.NewTableCell(" (F7) + New connection").
-		SetTextColor(tcell.ColorYellow).
-		SetExpansion(1)
+		newCell := tview.NewTableCell(" (F7) + New connection").
+			SetTextColor(tcell.ColorYellow).
+			SetExpansion(1)
 
-	newDescCell := tview.NewTableCell("create a new Cesbo Astra connection").
-		SetTextColor(tcell.ColorGreen).
-		SetAlign(tview.AlignRight).
-		SetExpansion(1)
+		newDescCell := tview.NewTableCell("create a new Cesbo Astra connection").
+			SetTextColor(tcell.ColorGreen).
+			SetAlign(tview.AlignRight).
+			SetExpansion(1)
 
-	table.SetCell(newRow, 0, newCell)
-	table.SetCell(newRow, 1, newDescCell)
+		table.SetCell(newRow, 0, newCell)
+		table.SetCell(newRow, 1, newDescCell)
+	}
 
 	table.SetSelectedFunc(func(row int, _ int) {
 		if row >= 0 && row < len(ui.cfg.Connections) {
@@ -115,6 +127,11 @@ func (ui *UI) ShowConnections() {
 		}
 
 		if row == len(ui.cfg.Connections) {
+			if !dashboard.CanChangeConnections() {
+				ui.ShowRestrictedConnectionsError(table)
+				return
+			}
+
 			ui.ShowConnectionForm(nil)
 			return
 		}
@@ -131,10 +148,20 @@ func (ui *UI) ShowConnections() {
 			return nil
 
 		case tcell.KeyF7:
+			if !dashboard.CanChangeConnections() {
+				ui.ShowRestrictedConnectionsError(table)
+				return nil
+			}
+
 			ui.ShowConnectionForm(nil)
 			return nil
 
 		case tcell.KeyF4:
+			if !dashboard.CanChangeConnections() {
+				ui.ShowRestrictedConnectionsError(table)
+				return nil
+			}
+
 			row, _ := table.GetSelection()
 			if row >= 0 && row < len(ui.cfg.Connections) {
 				conn := ui.cfg.Connections[row]
@@ -143,6 +170,11 @@ func (ui *UI) ShowConnections() {
 			return nil
 
 		case tcell.KeyF8, tcell.KeyDelete:
+			if !dashboard.CanChangeConnections() {
+				ui.ShowRestrictedConnectionsError(table)
+				return nil
+			}
+
 			row, _ := table.GetSelection()
 			if row >= 0 && row < len(ui.cfg.Connections) {
 				ui.ConfirmDelete(ui.cfg.Connections[row])
@@ -156,7 +188,11 @@ func (ui *UI) ShowConnections() {
 	help := tview.NewTextView()
 	help.SetDynamicColors(true)
 	help.SetTextAlign(tview.AlignCenter)
-	help.SetText("[gray]Enter — open · F4 — edit · F7 — new · F8 — delete · ESC — quit[-]")
+	if dashboard.CanChangeConnections() {
+		help.SetText("[gray]Enter — open · F4 — edit · F7 — new · F8 — delete · ESC — quit[-]")
+	} else {
+		help.SetText("[gray]Enter — open · ESC — quit[-]")
+	}
 
 	body := tview.NewFlex()
 	body.SetDirection(tview.FlexRow)
@@ -169,6 +205,10 @@ func (ui *UI) ShowConnections() {
 }
 
 func (ui *UI) ShowConnectionForm(editConn *astra.Connection) {
+	if !dashboard.CanChangeConnections() {
+		ui.ShowRestrictedConnectionsError(ui.app.GetFocus())
+		return
+	}
 	ui.pages.RemovePage(pageDialog)
 
 	isEdit := editConn != nil
@@ -294,6 +334,10 @@ func validateConnection(conn astra.Connection) error {
 }
 
 func (ui *UI) ConfirmDelete(conn astra.Connection) {
+	if !dashboard.CanChangeConnections() {
+		ui.ShowRestrictedConnectionsError(ui.app.GetFocus())
+		return
+	}
 	modal := tview.NewModal()
 	modal.SetText(fmt.Sprintf("Delete connection?\n\n%s\n%s", conn.Name, conn.DisplayMaskedDSN()))
 	modal.AddButtons([]string{"Delete", "Cancel"})

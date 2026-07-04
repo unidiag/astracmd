@@ -131,6 +131,15 @@ func ShowStreamDialog(
 		return view
 	}
 
+	disabledColor := tcell.ColorGray
+
+	styleDisabledButton := func(button *tview.Button) {
+		button.SetLabelColor(tcell.ColorBlack)
+		button.SetBackgroundColor(disabledColor)
+		button.SetLabelColorActivated(tcell.ColorBlack)
+		button.SetBackgroundColorActivated(disabledColor)
+	}
+
 	makeCAMDropDown := func(index int, field *tview.InputField) *tview.DropDown {
 		options := []string{"-"}
 		camIDs := []string{""}
@@ -260,6 +269,12 @@ func ShowStreamDialog(
 	}
 
 	save := func() {
+
+		if !CanChangeAstraConfig() {
+			opt.ShowError("Restricted mode: run astracmd as root to change Astra config", root)
+			return
+		}
+
 		parsed, err := dashboardBuildStreamFromForm(
 			stream,
 			enable,
@@ -425,6 +440,9 @@ func ShowStreamDialog(
 		}
 
 		saveButton := tview.NewButton("Save").SetSelectedFunc(save)
+		if !CanChangeAstraConfig() {
+			styleDisabledButton(saveButton)
+		}
 		cancelButton := tview.NewButton("Cancel").SetSelectedFunc(func() {
 			cancel()
 		})
@@ -450,7 +468,11 @@ func ShowStreamDialog(
 			AddItem(nil, 1, 0, false)
 
 		root.SetBorder(true)
-		root.SetTitle(title)
+		if !CanChangeAstraConfig() {
+			root.SetTitle(title + " [restricted] ")
+		} else {
+			root.SetTitle(title)
+		}
 		root.SetTitleAlign(tview.AlignCenter)
 		root.SetBackgroundColor(tcell.ColorBlack)
 

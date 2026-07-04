@@ -33,6 +33,13 @@ func Show(opt Options) {
 		return opt.App.GetFocus()
 	}
 
+	restrictedDenied := func() {
+		opt.ShowError(
+			"Restricted mode: run astracmd as root to change Astra config",
+			currentFocus(),
+		)
+	}
+
 	var loadAstraConfig func()
 	var loadAstraConfigAfter func(afterLoad func())
 
@@ -175,6 +182,11 @@ func Show(opt Options) {
 	}
 
 	showSoftCAMDialog := func() {
+		if !CanChangeAstraConfig() {
+			restrictedDenied()
+			return
+		}
+
 		ShowSoftCAMDialog(
 			opt,
 			conn,
@@ -336,6 +348,11 @@ func Show(opt Options) {
 	}
 
 	newDashboardItem := func() {
+		if !CanChangeAstraConfig() {
+			restrictedDenied()
+			return
+		}
+
 		switch rt.activePane {
 		case dashboardPaneAdapters:
 			newAdapter()
@@ -528,6 +545,11 @@ func Show(opt Options) {
 	}
 
 	deleteSelectedDashboardItem := func() {
+		if !CanChangeAstraConfig() {
+			restrictedDenied()
+			return
+		}
+
 		switch rt.activePane {
 		case dashboardPaneAdapters:
 			deleteSelectedAdapter()
@@ -647,6 +669,10 @@ func Show(opt Options) {
 
 				OpenItem: func() {
 					openSelectedDashboardItem()
+				},
+
+				RestrictedDenied: func() {
+					restrictedDenied()
 				},
 
 				ToggleStreamMark: func() {

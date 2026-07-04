@@ -19,6 +19,8 @@ type DashboardKeyActions struct {
 	RestartItem func()
 	SoftCAM     func()
 
+	RestrictedDenied func()
+
 	ToggleStreamMark func()
 	MarkAllStreams   func()
 
@@ -100,10 +102,20 @@ func dashboardHandleKeys(
 		return true
 
 	case tcell.KeyF2:
+		if !CanChangeAstraConfig() {
+			dashboardRunAction(actions.RestrictedDenied)
+			return true
+		}
+
 		dashboardRunAction(actions.Restart)
 		return true
 
 	case tcell.KeyF3:
+		if !CanChangeAstraConfig() {
+			dashboardRunAction(actions.RestrictedDenied)
+			return true
+		}
+
 		dashboardRunAction(actions.SoftCAM)
 		return true
 

@@ -89,6 +89,14 @@ func ShowLicenseDialog(opt Options, conn astra.Connection, onOK func(), onError 
 	form.AddFormItem(licenseField)
 
 	form.AddButton("Apply", func() {
+		if !CanChangeAstraConfig() {
+			opt.ShowError(
+				"Restricted mode: run astracmd as root to change Astra license",
+				form,
+			)
+			return
+		}
+
 		license = strings.TrimSpace(license)
 
 		if license == "" {
@@ -125,6 +133,16 @@ func ShowLicenseDialog(opt Options, conn astra.Connection, onOK func(), onError 
 	form.AddButton("Cancel", func() {
 		opt.Pages.RemovePage(PageDialog)
 	})
+
+	if !CanChangeAstraConfig() {
+		applyButton := form.GetButton(0)
+		if applyButton != nil {
+			applyButton.SetLabelColor(tcell.ColorBlack)
+			applyButton.SetBackgroundColor(tcell.ColorGray)
+			applyButton.SetLabelColorActivated(tcell.ColorBlack)
+			applyButton.SetBackgroundColorActivated(tcell.ColorGray)
+		}
+	}
 
 	body := tview.NewFlex()
 	body.SetDirection(tview.FlexRow)

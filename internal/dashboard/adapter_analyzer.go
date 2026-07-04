@@ -101,6 +101,11 @@ func ShowAdapterAnalyzerDialog(
 	}
 
 	runScan := func() {
+
+		if denyRestrictedStatus(status) {
+			return
+		}
+
 		if scanInProgress {
 			return
 		}
@@ -169,6 +174,11 @@ func ShowAdapterAnalyzerDialog(
 
 	// send diseqc cmd
 	sendDiseqcCommand := func() {
+
+		if denyRestrictedStatus(status) {
+			return
+		}
+
 		rawCommand := strings.TrimSpace(diseqcInput.GetText())
 
 		cmdAdapter := adapter

@@ -91,6 +91,12 @@ func ShowAdapterDialog(
 		})
 
 	save := func() {
+
+		if !CanChangeAstraConfig() {
+			opt.ShowError("Restricted mode: run astracmd as root to change Astra config", opt.App.GetFocus())
+			return
+		}
+
 		parsed, err := dashboardBuildAdapterFromForm(
 			adapter,
 			enable,
@@ -157,7 +163,7 @@ func ShowAdapterDialog(
 
 		scanButton.SetLabel("Scan")
 
-		if isEdit {
+		if isEdit && CanChangeAstraConfig() {
 			scanButton.SetLabelColor(tcell.ColorWhite)
 			scanButton.SetBackgroundColor(tcell.ColorDarkCyan)
 			scanButton.SetLabelColorActivated(tcell.ColorBlack)
@@ -236,6 +242,11 @@ func ShowAdapterDialog(
 			return
 		}
 
+		if !CanChangeAstraConfig() {
+			opt.ShowError("Restricted mode: run astracmd as root to change Astra config", opt.App.GetFocus())
+			return
+		}
+
 		parsed, err := dashboardBuildAdapterFromForm(
 			adapter,
 			enable,
@@ -295,6 +306,14 @@ func ShowAdapterDialog(
 	}
 
 	saveButton := tview.NewButton("Save").SetSelectedFunc(save)
+
+	if !CanChangeAstraConfig() {
+		saveButton.SetLabelColor(tcell.ColorBlack)
+		saveButton.SetBackgroundColor(disabledColor)
+		saveButton.SetLabelColorActivated(tcell.ColorBlack)
+		saveButton.SetBackgroundColorActivated(disabledColor)
+	}
+
 	scanButton = tview.NewButton("Scan").SetSelectedFunc(scan)
 	setScanButtonIdleStyle()
 

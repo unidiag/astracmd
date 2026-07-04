@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"main/internal/dashboard"
 	"os"
 	"sync"
 )
@@ -35,6 +36,7 @@ type AppArgs struct {
 func main() {
 
 	debug = isRunThroughGoRun()
+	dashboard.SetRestrictedMode(os.Geteuid() != 0)
 
 	args, err := parseAppArgs(os.Args[1:])
 	if err != nil {
