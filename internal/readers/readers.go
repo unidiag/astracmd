@@ -20,12 +20,6 @@ func Show(opt Options) {
 	table.SetSelectable(true, false)
 	table.SetEvaluateAllRows(true)
 
-	configArea := tview.NewTextArea()
-	configArea.SetBorder(true)
-	configArea.SetTitle(" oscam.conf ")
-	configArea.SetTitleAlign(tview.AlignCenter)
-	configArea.SetPlaceholder("Select busy reader with oscam process")
-
 	logView := tview.NewTextView()
 	logView.SetBorder(true)
 	logView.SetTitle(" Log ")
@@ -34,16 +28,35 @@ func Show(opt Options) {
 	logView.SetWrap(false)
 	logView.SetScrollable(false)
 
+	logFilter := tview.NewInputField()
+	logFilter.SetLabel(" Regex: ")
+	logFilter.SetFieldWidth(0)
+	logFilter.SetBorder(false)
+	logFilter.SetFieldBackgroundColor(tcell.ColorBlack)
+	logFilter.SetFieldTextColor(tcell.ColorWhite)
+	logFilter.SetLabelColor(tcell.ColorYellow)
+
 	status := tview.NewTextView()
 	status.SetDynamicColors(true)
 	status.SetTextAlign(tview.AlignCenter)
-	status.SetText("[gray]Tab — switch Readers/Config    Ctrl+S — save config    Space — kill process    Esc — close[-]")
+	status.SetText("[gray]Tab — switch Readers/Regex    Enter — oscam.conf    Space — kill process    Esc — close[-]")
 
 	content := tview.NewFlex()
 	content.SetDirection(tview.FlexColumn)
-	content.AddItem(table, 0, 2, true)
-	content.AddItem(configArea, 0, 3, false)
-	content.AddItem(logView, 0, 5, false)
+	content.AddItem(table, 0, 1, true)
+
+	logPane := tview.NewFlex()
+	logPane.SetDirection(tview.FlexRow)
+	logPane.SetBorder(true)
+	logPane.SetTitle(" Log ")
+	logPane.SetTitleAlign(tview.AlignCenter)
+
+	logView.SetBorder(false)
+
+	logPane.AddItem(logFilter, 1, 0, false)
+	logPane.AddItem(logView, 0, 1, false)
+
+	content.AddItem(logPane, 0, 2, false)
 
 	body := tview.NewFlex()
 	body.SetDirection(tview.FlexRow)
@@ -69,8 +82,7 @@ func Show(opt Options) {
 
 	updateBorders := func() {
 		table.SetBorderColor(tcell.ColorWhite)
-		configArea.SetBorderColor(tcell.ColorWhite)
-		logView.SetBorderColor(tcell.ColorWhite)
+		logPane.SetBorderColor(tcell.ColorWhite)
 	}
 
 	focusPane := func(pane int) {
@@ -78,8 +90,9 @@ func Show(opt Options) {
 		updateBorders()
 
 		switch pane {
-		case readersPaneConfig:
-			opt.App.SetFocus(configArea)
+		case readersPaneLogFilter:
+			opt.App.SetFocus(logFilter)
+
 		default:
 			opt.App.SetFocus(table)
 		}
@@ -96,7 +109,9 @@ func Show(opt Options) {
 			height = 50
 		}
 
-		text, err := readTailLines(currentState.LogPath, readersLogTailBytes, height)
+		filterText := strings.TrimSpace(logFilter.GetText())
+
+		text, err := readTailLines(currentState.LogPath, readersLogTailBytes, height, filterText)
 		if err != nil {
 			logView.SetText(fmt.Sprintf("[red]%s[-]", tview.Escape(err.Error())))
 			return
@@ -107,7 +122,7 @@ func Show(opt Options) {
 			return
 		}
 
-		logView.SetText(tview.Escape(text))
+		logView.SetText(text)
 	}
 
 	loadSelectedConfig := func(force bool) {
@@ -116,8 +131,6 @@ func Show(opt Options) {
 
 		if deviceIndex < 0 || deviceIndex >= len(currentDevices) {
 			currentState = selectedReaderState{}
-			configArea.SetTitle(" oscam.conf ")
-			configArea.SetText("", false)
 			logView.SetText("")
 			return
 		}
@@ -127,8 +140,6 @@ func Show(opt Options) {
 		configPath := oscamConfigPathFromCommand(device.ProcessCmd)
 		if strings.TrimSpace(configPath) == "" {
 			currentState = selectedReaderState{Device: device}
-			configArea.SetTitle(" oscam.conf ")
-			configArea.SetText("", false)
 			logView.SetText("[gray]oscam config path not found in process command[-]")
 			return
 		}
@@ -143,8 +154,6 @@ func Show(opt Options) {
 				Device:     device,
 				ConfigPath: configPath,
 			}
-			configArea.SetTitle(" " + configPath + " ")
-			configArea.SetText("", false)
 			logView.SetText(fmt.Sprintf("[red]%s[-]", tview.Escape(err.Error())))
 			return
 		}
@@ -158,32 +167,25 @@ func Show(opt Options) {
 			LogPath:    logPath,
 		}
 
-		configArea.SetTitle(" " + configPath + " ")
-		configArea.SetText(currentState.ConfigText, false)
-
 		loadLog()
 	}
 
-	saveConfig := func() {
+	saveConfigText := func(text string) error {
 		if strings.TrimSpace(currentState.ConfigPath) == "" {
-			setStatus("[yellow]No oscam.conf selected[-]")
-			return
+			return fmt.Errorf("no oscam.conf selected")
 		}
 
-		text := configArea.GetText()
-
 		if err := os.WriteFile(currentState.ConfigPath, []byte(text), 0644); err != nil {
-			setStatus(fmt.Sprintf("[red]Save failed: %s[-]", tview.Escape(err.Error())))
-			return
+			return err
 		}
 
 		currentState.ConfigText = text
 		currentState.ConfigDirty = false
 		currentState.LogPath = oscamLogPathFromConfig(text, filepath.Dir(currentState.ConfigPath))
 
-		setStatus(fmt.Sprintf("[green]Saved %s[-]", tview.Escape(currentState.ConfigPath)))
-
 		loadLog()
+
+		return nil
 	}
 
 	loadDevices := func(keepSelection bool) {
@@ -282,10 +284,71 @@ func Show(opt Options) {
 		opt.App.SetFocus(modal)
 	}
 
+	showConfigModal := func() {
+		if strings.TrimSpace(currentState.ConfigPath) == "" {
+			setStatus("[yellow]No oscam.conf selected[-]")
+			return
+		}
+
+		configEditor := tview.NewTextArea()
+		configEditor.SetBorder(true)
+		configEditor.SetTitle(" " + currentState.ConfigPath + " ")
+		configEditor.SetTitleAlign(tview.AlignCenter)
+		configEditor.SetText(currentState.ConfigText, false)
+
+		footer := tview.NewTextView()
+		footer.SetDynamicColors(true)
+		footer.SetTextAlign(tview.AlignCenter)
+		footer.SetText("[gray]Ctrl+S — save    Esc — close[-]")
+
+		modalBody := tview.NewFlex()
+		modalBody.SetDirection(tview.FlexRow)
+		modalBody.AddItem(configEditor, 0, 1, true)
+		modalBody.AddItem(footer, 1, 0, false)
+
+		closeConfigModal := func() {
+			opt.Pages.RemovePage(opt.PageName + "-config")
+			focusPane(activePane)
+		}
+
+		configEditor.SetChangedFunc(func() {
+			currentState.ConfigDirty = configEditor.GetText() != currentState.ConfigText
+		})
+
+		configEditor.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			if opt.HandleGlobalKeys != nil && opt.HandleGlobalKeys(event) {
+				return nil
+			}
+
+			switch event.Key() {
+			case tcell.KeyEsc:
+				closeConfigModal()
+				return nil
+
+			case tcell.KeyCtrlS:
+				text := configEditor.GetText()
+
+				if err := saveConfigText(text); err != nil {
+					footer.SetText(fmt.Sprintf("[red]Save failed: %s[-]", tview.Escape(err.Error())))
+					return nil
+				}
+
+				footer.SetText(fmt.Sprintf("[green]Saved %s[-]", tview.Escape(currentState.ConfigPath)))
+				return nil
+			}
+
+			return event
+		})
+
+		opt.Pages.AddPage(opt.PageName+"-config", centerPrimitive(modalBody, 110, 32), true, true)
+		opt.App.SetFocus(configEditor)
+	}
+
 	togglePane := func() {
 		switch activePane {
 		case readersPaneList:
-			focusPane(readersPaneConfig)
+			focusPane(readersPaneLogFilter)
+
 		default:
 			focusPane(readersPaneList)
 		}
@@ -305,9 +368,9 @@ func Show(opt Options) {
 			togglePane()
 			return nil
 
-		case tcell.KeyCtrlS:
-			if activePane == readersPaneConfig {
-				saveConfig()
+		case tcell.KeyEnter:
+			if activePane == readersPaneList {
+				showConfigModal()
 				return nil
 			}
 
@@ -326,8 +389,8 @@ func Show(opt Options) {
 			return
 		}
 
-		currentState.ConfigDirty = false
 		loadSelectedConfig(true)
+		showConfigModal()
 	})
 
 	table.SetSelectionChangedFunc(func(row int, _ int) {
@@ -342,22 +405,67 @@ func Show(opt Options) {
 		loadSelectedConfig(false)
 	})
 
-	configArea.SetChangedFunc(func() {
-		if strings.TrimSpace(currentState.ConfigPath) == "" {
-			return
-		}
-
-		currentState.ConfigDirty = configArea.GetText() != currentState.ConfigText
+	logFilter.SetChangedFunc(func(text string) {
+		loadLog()
 	})
 
 	table.SetInputCapture(inputCapture)
-	configArea.SetInputCapture(inputCapture)
+
+	logFilter.SetInputCapture(inputCapture)
+	logPane.SetInputCapture(inputCapture)
 	body.SetInputCapture(inputCapture)
 
-	loadDevices(false)
+	refreshDevicesAndLog := func(keepSelection bool) {
+		devices, err := ListDevices()
+
+		opt.App.QueueUpdateDraw(func() {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			selectedName := ""
+
+			if keepSelection {
+				row, _ := table.GetSelection()
+				deviceIndex := row - 1
+				if deviceIndex >= 0 && deviceIndex < len(currentDevices) {
+					selectedName = currentDevices[deviceIndex].Name
+				}
+			}
+
+			currentDevices = devices
+			renderDevices(table, devices, err)
+
+			if selectedName != "" {
+				for i, device := range devices {
+					if device.Name == selectedName {
+						table.Select(i+1, 0)
+						break
+					}
+				}
+			}
+
+			if selectedName == "" && len(devices) > 0 {
+				table.Select(1, 0)
+			}
+
+			if !currentState.ConfigDirty {
+				loadSelectedConfig(false)
+			}
+
+			loadLog()
+		})
+	}
+
+	opt.Pages.AddPage(opt.PageName, body, true, true)
+	focusPane(readersPaneList)
 	updateBorders()
 
 	go func() {
+		refreshDevicesAndLog(false)
+
 		ticker := time.NewTicker(readersRefreshPeriod)
 		defer ticker.Stop()
 
@@ -367,44 +475,8 @@ func Show(opt Options) {
 				return
 
 			case <-ticker.C:
-				devices, err := ListDevices()
-
-				opt.App.QueueUpdateDraw(func() {
-					select {
-					case <-ctx.Done():
-						return
-					default:
-					}
-
-					selectedName := ""
-					row, _ := table.GetSelection()
-					deviceIndex := row - 1
-					if deviceIndex >= 0 && deviceIndex < len(currentDevices) {
-						selectedName = currentDevices[deviceIndex].Name
-					}
-
-					currentDevices = devices
-					renderDevices(table, devices, err)
-
-					if selectedName != "" {
-						for i, device := range devices {
-							if device.Name == selectedName {
-								table.Select(i+1, 0)
-								break
-							}
-						}
-					}
-
-					if !currentState.ConfigDirty {
-						loadSelectedConfig(false)
-					}
-
-					loadLog()
-				})
+				refreshDevicesAndLog(true)
 			}
 		}
 	}()
-
-	opt.Pages.AddPage(opt.PageName, body, true, true)
-	focusPane(readersPaneList)
 }

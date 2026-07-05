@@ -1,9 +1,22 @@
 package readers
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
+
+	"github.com/rivo/tview"
+)
+
+var (
+	oscamLogDatePrefixRe = regexp.MustCompile(`^\d{4}[/-]\d{2}[/-]\d{2}\s+`)
+	oscamLogThreadIDRe   = regexp.MustCompile(`^(\d{2}:\d{2}:\d{2})\s+[0-9A-Fa-f]{8}\s+`)
+	oscamLogClientFlagRe = regexp.MustCompile(`^(\d{2}:\d{2}:\d{2})\s+c\s+`)
+	oscamLogECMTimeRe    = regexp.MustCompile(`\((\d+)\s*ms\)`)
+	oscamLogCacheRe      = regexp.MustCompile(`\scache\d+\s`)
 )
 
 func oscamConfigPathFromCommand(command string) string {
@@ -76,7 +89,7 @@ func oscamLogPathFromConfig(configText string, configDir string) string {
 	return ""
 }
 
-func readTailLines(path string, maxBytes int64, maxLines int) (string, error) {
+func readTailLines(path string, maxBytes int64, maxLines int, filterText string) (string, error) {
 	if maxLines <= 0 {
 		maxLines = 1
 	}
@@ -113,7 +126,6 @@ func readTailLines(path string, maxBytes int64, maxLines int) (string, error) {
 	text := string(data[:n])
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	text = strings.ReplaceAll(text, "\r", "\n")
-	text = strings.ReplaceAll(text, "\t", " ")
 	text = strings.TrimRight(text, "\n")
 
 	if text == "" {
@@ -126,18 +138,153 @@ func readTailLines(path string, maxBytes int64, maxLines int) (string, error) {
 		lines = lines[1:]
 	}
 
-	if len(lines) > maxLines {
-		lines = lines[len(lines)-maxLines:]
+	filterText = strings.TrimSpace(filterText)
+	filterLower := strings.ToLower(filterText)
+
+	prepared := make([]string, 0, len(lines))
+
+	for _, line := range lines {
+		line = cleanLogLine(line)
+
+		if line == "" {
+			continue
+		}
+
+		if filterLower != "" && !strings.Contains(strings.ToLower(line), filterLower) {
+			continue
+		}
+
+		prepared = append(prepared, colorOscamLogLine(line, filterText))
 	}
 
-	for i := range lines {
-		lines[i] = cleanLogLine(lines[i])
+	if len(prepared) > maxLines {
+		prepared = prepared[len(prepared)-maxLines:]
 	}
 
-	return strings.Join(lines, "\n"), nil
+	return strings.Join(prepared, "\n"), nil
 }
 
 func cleanLogLine(line string) string {
 	line = strings.ReplaceAll(line, "\t", " ")
-	return strings.Join(strings.Fields(line), " ")
+	line = strings.Join(strings.Fields(line), " ")
+
+	line = oscamLogDatePrefixRe.ReplaceAllString(line, "")
+	line = oscamLogThreadIDRe.ReplaceAllString(line, "$1 ")
+	line = oscamLogClientFlagRe.ReplaceAllString(line, "$1 ")
+
+	return line
+}
+
+func colorOscamLogLine(line string, filterText string) string {
+	color := oscamLogLineColor(line)
+	filterText = strings.TrimSpace(filterText)
+
+	if filterText == "" {
+		line = tview.Escape(line)
+
+		if color == "" {
+			return line
+		}
+
+		return fmt.Sprintf("[%s]%s[-:-:-]", color, line)
+	}
+
+	return highlightLogSubstring(line, filterText, color)
+}
+
+func oscamLogLineColor(line string) string {
+	switch {
+	case strings.Contains(line, " not found "):
+		return "red"
+
+	case oscamLogCacheRe.MatchString(line):
+		return "gray"
+
+	case strings.Contains(line, " found "):
+		matches := oscamLogECMTimeRe.FindStringSubmatch(line)
+
+		if len(matches) != 2 {
+			return ""
+		}
+
+		ms, err := strconv.Atoi(matches[1])
+		if err != nil {
+			return ""
+		}
+
+		switch {
+		case ms > 2500:
+			return "red"
+		case ms > 1000:
+			return "yellow"
+		default:
+			return "green"
+		}
+	}
+
+	return ""
+}
+
+func highlightLogSubstring(line string, filterText string, baseColor string) string {
+	filterText = strings.TrimSpace(filterText)
+
+	if filterText == "" {
+		return tview.Escape(line)
+	}
+
+	lineLower := strings.ToLower(line)
+	filterLower := strings.ToLower(filterText)
+
+	var b strings.Builder
+
+	pos := 0
+	filterLen := len(filterText)
+
+	writeNormal := func(text string) {
+		if text == "" {
+			return
+		}
+
+		text = tview.Escape(text)
+
+		if baseColor == "" {
+			b.WriteString(text)
+			return
+		}
+
+		b.WriteString("[")
+		b.WriteString(baseColor)
+		b.WriteString("]")
+		b.WriteString(text)
+		b.WriteString("[-:-:-]")
+	}
+
+	writeMatch := func(text string) {
+		if text == "" {
+			return
+		}
+
+		b.WriteString("[black:white:b]")
+		b.WriteString(tview.Escape(text))
+		b.WriteString("[-:-:-]")
+	}
+
+	for {
+		index := strings.Index(lineLower[pos:], filterLower)
+		if index < 0 {
+			break
+		}
+
+		start := pos + index
+		end := start + filterLen
+
+		writeNormal(line[pos:start])
+		writeMatch(line[start:end])
+
+		pos = end
+	}
+
+	writeNormal(line[pos:])
+
+	return b.String()
 }

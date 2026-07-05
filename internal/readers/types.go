@@ -8,10 +8,17 @@ import (
 )
 
 const (
-	serialByIDPath       = "/dev/serial/by-id"
-	readersPaneList      = 0
-	readersPaneConfig    = 1
-	readersLogTailBytes  = 16 * 1024
+	serialByIDPath      = "/dev/serial/by-id"
+	readersLogTailBytes = 16 * 1024
+)
+
+const (
+	readersPaneList = iota
+	readersPaneConfig
+	readersPaneLogFilter
+)
+
+const (
 	readersRefreshPeriod = time.Second
 )
 
