@@ -1,6 +1,8 @@
+web/
 web/node_modules/
 web/.env.development
 build/
+webserver.go
 make
 astracmd
 main

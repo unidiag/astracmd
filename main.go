@@ -11,7 +11,7 @@ const (
 	APPNAME     = "astracmd"
 	APPNAMEFULL = "Astra Commander"
 	VERSION     = "1.01"
-	BUILD       = "02.07.2026 14:57:14"
+	BUILD       = "05.07.2026 18:55:28"
 )
 
 type RunMode int
@@ -49,8 +49,9 @@ func main() {
 	}
 
 	switch args.Mode {
-	case RunModeWeb:
-		webserver(args.Port)
+	// disable web-version
+	// case RunModeWeb:
+	// 	webserver(args.Port)
 
 	case RunModeTUI:
 		runTUI(cfg)

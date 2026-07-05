@@ -1,62 +1,15 @@
 package main
 
 import (
-	"embed"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/rivo/tview"
 )
-
-//go:embed build/*
-var staticFiles embed.FS
-
-type FileInfo struct {
-	Path  string
-	IsDir bool
-}
-
-// это для файлов ./build вебсервера
-func readDirRecursively(dirPath string) ([]FileInfo, error) {
-	var result []FileInfo
-	files, err := staticFiles.ReadDir(dirPath)
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range files {
-		fullPath := dirPath + "/" + file.Name()
-
-		info := FileInfo{
-			Path:  fullPath,
-			IsDir: file.IsDir(),
-		}
-		result = append(result, info)
-		if file.IsDir() {
-			subdirContents, err := readDirRecursively(fullPath)
-			if err != nil {
-				return nil, err
-			}
-			result = append(result, subdirContents...)
-		}
-	}
-	return result, nil
-}
-
-func getFileExtension(filePath string) string {
-	parts := strings.Split(filePath, "/")
-	fileName := parts[len(parts)-1]
-	fileParts := strings.Split(fileName, ".")
-	if len(fileParts) > 1 {
-		extension := fileParts[len(fileParts)-1]
-		return extension
-	}
-	return ""
-}
 
 func isRunThroughGoRun() bool {
 	exePath, err := os.Executable()
