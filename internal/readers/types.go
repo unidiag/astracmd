@@ -14,7 +14,6 @@ const (
 
 const (
 	readersPaneList = iota
-	readersPaneConfig
 	readersPaneLogFilter
 )
 
@@ -26,12 +25,14 @@ type Options struct {
 	App              *tview.Application
 	Pages            *tview.Pages
 	PageName         string
+	ConfigPath       string
 	HandleGlobalKeys func(*tcell.EventKey) bool
 }
 
 type Device struct {
 	Name        string
 	Path        string
+	DisplayName string
 	Target      string
 	Busy        bool
 	ProcessPID  int
@@ -45,4 +46,13 @@ type selectedReaderState struct {
 	ConfigText  string
 	ConfigDirty bool
 	LogPath     string
+}
+
+type ReaderSection struct {
+	Section    string
+	Enabled    bool
+	Name       string
+	SerialByID string
+	OscamBin   string
+	OscamDir   string
 }

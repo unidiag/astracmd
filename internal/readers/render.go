@@ -10,7 +10,7 @@ import (
 func renderDevices(table *tview.Table, devices []Device, err error) {
 	table.Clear()
 
-	table.SetCell(0, 0, tview.NewTableCell(" Device").
+	table.SetCell(0, 0, tview.NewTableCell(" Reader").
 		SetTextColor(tcell.ColorYellow).
 		SetSelectable(false).
 		SetExpansion(1))
@@ -69,7 +69,7 @@ func renderDevices(table *tview.Table, devices []Device, err error) {
 			processText = fmt.Sprintf("%s (%d)", device.ProcessName, device.ProcessPID)
 		}
 
-		table.SetCell(row, 0, tview.NewTableCell(" "+displayDeviceName(device.Name)).
+		table.SetCell(row, 0, tview.NewTableCell(" "+readerDeviceTitle(device)).
 			SetTextColor(tcell.ColorWhite).
 			SetExpansion(1))
 

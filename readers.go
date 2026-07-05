@@ -15,6 +15,7 @@ func (ui *UI) ShowReaders() {
 		App:              ui.app,
 		Pages:            ui.pages,
 		PageName:         pageDialog,
+		ConfigPath:       ui.cfg.Path,
 		HandleGlobalKeys: ui.HandleGlobalKeys,
 	})
 }

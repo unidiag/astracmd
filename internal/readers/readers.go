@@ -39,7 +39,7 @@ func Show(opt Options) {
 	status := tview.NewTextView()
 	status.SetDynamicColors(true)
 	status.SetTextAlign(tview.AlignCenter)
-	status.SetText("[gray]Tab — switch Readers/Regex    Enter — oscam.conf    Space — kill process    Esc — close[-]")
+	status.SetText("[gray]Tab — switch Readers/Regex    Enter — reader INI    F4 — oscam.conf    Space — kill process    Esc — close[-]")
 
 	content := tview.NewFlex()
 	content.SetDirection(tview.FlexColumn)
@@ -66,6 +66,7 @@ func Show(opt Options) {
 	var (
 		currentDevices []Device
 		currentState   selectedReaderState
+		readerSections map[string]ReaderSection
 		activePane     = readersPaneList
 	)
 
@@ -200,6 +201,15 @@ func Show(opt Options) {
 		}
 
 		devices, err := ListDevices()
+
+		sections, sectionErr := loadReaderSections(opt.ConfigPath)
+		if sectionErr == nil {
+			readerSections = sections
+			applyReaderSections(devices, readerSections)
+		} else if strings.TrimSpace(opt.ConfigPath) != "" {
+			setStatus(fmt.Sprintf("[red]INI read failed: %s[-]", tview.Escape(sectionErr.Error())))
+		}
+
 		currentDevices = devices
 		renderDevices(table, devices, err)
 
@@ -237,7 +247,7 @@ func Show(opt Options) {
 		modal := tview.NewModal()
 		modal.SetText(fmt.Sprintf(
 			"Kill process?\n\nDevice: %s\nTarget: %s\nProcess: %s\n\nThis is equivalent to kill -9 %d.",
-			displayDeviceName(device.Name),
+			readerDeviceTitle(device),
 			device.Target,
 			processTitle,
 			device.ProcessPID,
@@ -284,7 +294,108 @@ func Show(opt Options) {
 		opt.App.SetFocus(modal)
 	}
 
-	showConfigModal := func() {
+	showReaderSectionModal := func() {
+		row, _ := table.GetSelection()
+		deviceIndex := row - 1
+
+		if deviceIndex < 0 || deviceIndex >= len(currentDevices) {
+			setStatus("[yellow]Select reader first[-]")
+			return
+		}
+
+		if strings.TrimSpace(opt.ConfigPath) == "" {
+			setStatus("[red]INI config path is empty[-]")
+			return
+		}
+
+		device := currentDevices[deviceIndex]
+
+		section := ReaderSection{
+			SerialByID: device.Name,
+			OscamBin:   "oscam",
+		}
+
+		if readerSections != nil {
+			if found, ok := readerSections[device.Name]; ok {
+				section = found
+			}
+		}
+
+		nameValue := section.Name
+		enabledValue := section.Enabled
+		serialValue := device.Name
+		oscamBinValue := section.OscamBin
+		oscamDirValue := section.OscamDir
+
+		form := tview.NewForm()
+		form.SetBorder(true)
+		form.SetTitle(" Reader INI ")
+		form.SetTitleAlign(tview.AlignCenter)
+
+		form.AddCheckbox("enabled", enabledValue, func(checked bool) {
+			enabledValue = checked
+		})
+
+		form.AddInputField("name", nameValue, 50, nil, func(text string) {
+			nameValue = text
+		})
+
+		form.AddInputField("oscam_bin", oscamBinValue, 60, nil, func(text string) {
+			oscamBinValue = text
+		})
+
+		form.AddInputField("oscam_dir", oscamDirValue, 80, nil, func(text string) {
+			oscamDirValue = text
+		})
+
+		closeModal := func() {
+			opt.Pages.RemovePage(opt.PageName + "-reader-section")
+			focusPane(activePane)
+		}
+
+		form.AddButton("Save", func() {
+			section.Enabled = enabledValue
+			section.Name = strings.TrimSpace(nameValue)
+			section.SerialByID = normalizeSerialByID(serialValue)
+			section.OscamBin = strings.TrimSpace(oscamBinValue)
+			section.OscamDir = strings.TrimSpace(oscamDirValue)
+
+			if err := saveReaderSection(opt.ConfigPath, section); err != nil {
+				setStatus(fmt.Sprintf("[red]Save failed: %s[-]", tview.Escape(err.Error())))
+				return
+			}
+
+			sections, err := loadReaderSections(opt.ConfigPath)
+			if err == nil {
+				readerSections = sections
+			}
+
+			setStatus(fmt.Sprintf("[green]Saved reader %s[-]", tview.Escape(section.SerialByID)))
+
+			loadDevices(true)
+			closeModal()
+		})
+
+		form.AddButton("Cancel", closeModal)
+
+		form.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			if opt.HandleGlobalKeys != nil && opt.HandleGlobalKeys(event) {
+				return nil
+			}
+
+			if event.Key() == tcell.KeyEsc {
+				closeModal()
+				return nil
+			}
+
+			return event
+		})
+
+		opt.Pages.AddPage(opt.PageName+"-reader-section", centerPrimitive(form, 96, 16), true, true)
+		opt.App.SetFocus(form)
+	}
+
+	showOscamConfigModal := func() {
 		if strings.TrimSpace(currentState.ConfigPath) == "" {
 			setStatus("[yellow]No oscam.conf selected[-]")
 			return
@@ -370,7 +481,13 @@ func Show(opt Options) {
 
 		case tcell.KeyEnter:
 			if activePane == readersPaneList {
-				showConfigModal()
+				showReaderSectionModal()
+				return nil
+			}
+
+		case tcell.KeyF4:
+			if activePane == readersPaneList {
+				showOscamConfigModal()
 				return nil
 			}
 
@@ -390,7 +507,7 @@ func Show(opt Options) {
 		}
 
 		loadSelectedConfig(true)
-		showConfigModal()
+		showReaderSectionModal()
 	})
 
 	table.SetSelectionChangedFunc(func(row int, _ int) {
@@ -418,11 +535,21 @@ func Show(opt Options) {
 	refreshDevicesAndLog := func(keepSelection bool) {
 		devices, err := ListDevices()
 
+		sections, sectionErr := loadReaderSections(opt.ConfigPath)
+		if sectionErr == nil {
+			readerSections = sections
+			applyReaderSections(devices, readerSections)
+		}
+
 		opt.App.QueueUpdateDraw(func() {
 			select {
 			case <-ctx.Done():
 				return
 			default:
+			}
+
+			if sectionErr != nil && strings.TrimSpace(opt.ConfigPath) != "" {
+				setStatus(fmt.Sprintf("[red]INI read failed: %s[-]", tview.Escape(sectionErr.Error())))
 			}
 
 			selectedName := ""
@@ -479,4 +606,12 @@ func Show(opt Options) {
 			}
 		}
 	}()
+}
+
+func readerDeviceTitle(device Device) string {
+	if strings.TrimSpace(device.DisplayName) != "" {
+		return device.DisplayName
+	}
+
+	return displayDeviceName(device.Name)
 }

@@ -203,6 +203,8 @@ func (cfg *Config) Save() error {
 
 	cfg.ensureDefaults()
 
+	extraSections := readExtraIniSections(cfg.Path)
+
 	var b strings.Builder
 
 	b.WriteString("# astracmd config.ini\n")
@@ -230,6 +232,11 @@ func (cfg *Config) Save() error {
 		fmt.Fprintf(&b, "interface = %s\n", writeIniValue(conn.Interface))
 		fmt.Fprintf(&b, "port = %d\n", conn.Port)
 		fmt.Fprintf(&b, "debug = %t\n\n", conn.Debug)
+	}
+
+	if strings.TrimSpace(extraSections) != "" {
+		b.WriteString(extraSections)
+		b.WriteString("\n")
 	}
 
 	return os.WriteFile(cfg.Path, []byte(b.String()), 0644)
@@ -429,4 +436,43 @@ func (cfg *Config) ServiceProvider() string {
 	}
 
 	return value
+}
+
+func readExtraIniSections(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(string(data), "\n")
+
+	var b strings.Builder
+
+	currentKeep := false
+	wrote := false
+
+	for _, raw := range lines {
+		line := strings.TrimSpace(raw)
+
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			section := strings.TrimSpace(line[1 : len(line)-1])
+
+			currentKeep = !strings.EqualFold(section, "GLOBAL") &&
+				!strings.HasPrefix(section, "connection.")
+
+			if currentKeep && wrote {
+				b.WriteString("\n")
+			}
+		}
+
+		if !currentKeep {
+			continue
+		}
+
+		b.WriteString(raw)
+		b.WriteString("\n")
+		wrote = true
+	}
+
+	return strings.TrimRight(b.String(), "\n")
 }
