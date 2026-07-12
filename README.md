@@ -2,7 +2,7 @@
 
 `Astra Commander` is a terminal dashboard for monitoring and managing Cesbo Astra instances.
 
-![AstraCMD screenshot](https://github.com/unidiag/astracmd/blob/main/dash.jpg)
+![AstraCMD screenshot](https://raw.githubusercontent.com/unidiag/astracmd/refs/heads/main/dash.jpg)
 
 The application works directly with the Astra HTTP API and WebSocket API.
 It does not require a database.
