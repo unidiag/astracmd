@@ -24,10 +24,23 @@ It does not require a database.
 - Delete selected stream
 - Enable or disable debug log
 - Set Astra license
+- Access restriction by user (ROOT - full access, ANOTHER - only view and restart)
+- Convenient reader management
+- and etc..
 
 ## Compile
-Need: `Golang 1.25.0`
+To compile you will need: `Golang 1.25.0`
 ```bash
+sudo rm -rf /usr/local/go
+wget -q https://go.dev/dl/go1.25.0.linux-amd64.tar.gz -O /tmp/go1.25.0.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf /tmp/go1.25.0.linux-amd64.tar.gz
+/usr/local/go/bin/go version
+```
+
+After...
+```bash
+git clone https://github.com/unidiag/astracmd
+cd ./astracmd
 go build -o astracmd
 ```
 
