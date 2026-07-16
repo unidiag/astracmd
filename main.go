@@ -11,7 +11,7 @@ const (
 	APPNAME     = "astracmd"
 	APPNAMEFULL = "Astra Commander"
 	VERSION     = "1.02"
-	BUILD       = "16.07.2026 09:59:41"
+	BUILD       = "16.07.2026 10:06:22"
 )
 
 type RunMode int
