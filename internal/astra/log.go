@@ -30,6 +30,9 @@ type AstraLogItem struct {
 	Time int64  `json:"time"`
 	Type int    `json:"type"`
 	Text string `json:"text"`
+
+	Level   string `json:"level,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 func AstraSetLog(ctx context.Context, conn Connection, debug bool) AstraSetLogResult {
@@ -77,14 +80,37 @@ func AstraSetLog(ctx context.Context, conn Connection, debug bool) AstraSetLogRe
 func AstraLog(ctx context.Context, conn Connection) AstraLogResult {
 	raw, err := controlRequest(ctx, conn, []byte(`{"cmd":"log"}`))
 	if err != nil {
-		return AstraLogResult{OK: false, Err: err}
+		return AstraLogResult{
+			OK:  false,
+			Err: err,
+		}
 	}
 
 	var data AstraLogResponse
 	if err := json.Unmarshal(raw, &data); err != nil {
 		return AstraLogResult{
-			OK:  false,
-			Err: fmt.Errorf("parse astra log response: %w; raw: %s", err, string(raw)),
+			OK: false,
+			Err: fmt.Errorf(
+				"parse astra log response: %w; raw: %s",
+				err,
+				string(raw),
+			),
+		}
+	}
+
+	for i := range data.Log {
+		item := &data.Log[i]
+
+		if item.Text == "" {
+			item.Text = item.Message
+		}
+
+		if item.Type == 0 {
+			item.Type = astraLogTypeFromLevel(item.Level)
+		}
+
+		if item.ID == 0 {
+			item.ID = item.Time*1_000_000 + int64(i)
 		}
 	}
 
@@ -92,5 +118,21 @@ func AstraLog(ctx context.Context, conn Connection) AstraLogResult {
 		Items: data.Log,
 		Debug: data.Debug,
 		OK:    true,
+	}
+}
+
+func astraLogTypeFromLevel(level string) int {
+	switch strings.ToUpper(strings.TrimSpace(level)) {
+	case "ERROR":
+		return 3
+
+	case "WARN", "WARNING":
+		return 2
+
+	case "DEBUG":
+		return 0
+
+	default:
+		return 1
 	}
 }

@@ -10,8 +10,8 @@ import (
 const (
 	APPNAME     = "astracmd"
 	APPNAMEFULL = "Astra Commander"
-	VERSION     = "1.01"
-	BUILD       = "05.07.2026 18:55:28"
+	VERSION     = "1.02"
+	BUILD       = "16.07.2026 09:59:41"
 )
 
 type RunMode int
