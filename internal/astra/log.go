@@ -98,26 +98,30 @@ func AstraLog(ctx context.Context, conn Connection) AstraLogResult {
 		}
 	}
 
-	for i := range data.Log {
-		item := &data.Log[i]
-
-		if item.Text == "" {
-			item.Text = item.Message
-		}
-
-		if item.Type == 0 {
-			item.Type = astraLogTypeFromLevel(item.Level)
-		}
-
-		if item.ID == 0 {
-			item.ID = item.Time*1_000_000 + int64(i)
-		}
-	}
+	normalizeAstraLogItems(data.Log)
 
 	return AstraLogResult{
 		Items: data.Log,
 		Debug: data.Debug,
 		OK:    true,
+	}
+}
+
+func normalizeAstraLogItems(items []AstraLogItem) {
+	for i := range items {
+		item := &items[i]
+
+		if item.Message == "" && item.Level == "" {
+			// Old Astra format.
+			continue
+		}
+
+		item.Text = item.Message
+		item.Type = astraLogTypeFromLevel(item.Level)
+
+		if item.ID == 0 {
+			item.ID = item.Time*1_000_000 + int64(i)
+		}
 	}
 }
 
